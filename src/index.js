@@ -34,9 +34,18 @@ const client = new Client({
 // Make client globally accessible for webhook handler
 global.discordClient = client;
 
-// Raw body parser for webhook
-app.use("/webhook", express.raw({ type: "application/json" }));
+// Raw body parser for webhook (large pushes + workflow_run events exceed the 100kb default)
+app.use("/webhook", express.raw({ type: "application/json", limit: "5mb" }));
 app.post("/webhook", webhookHandler);
+app.use("/webhook", (err, req, res, next) => {
+  if (err) {
+    console.error(
+      `Webhook parse failed: ${err.type || err.message} | event=${req.headers["x-github-event"]} delivery=${req.headers["x-github-delivery"]} content-length=${req.headers["content-length"]}`
+    );
+    return res.status(413).send("Payload too large");
+  }
+  next();
+});
 
 // JSON parser for other routes
 app.use(express.json());
