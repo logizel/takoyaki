@@ -1,4 +1,9 @@
 import { Resvg } from "@resvg/resvg-js";
+import { fileURLToPath } from "node:url";
+
+const INTER_FONT_FILE = fileURLToPath(
+  new URL("../assets/fonts/Inter-Regular.ttf", import.meta.url),
+);
 
 export const STREAK_COLORS = {
   empty: "#151b23",
@@ -54,7 +59,7 @@ export function renderStreakPng(cells, startMonday) {
       prevMonth = m;
       const x = gx + col * (CELL + GAP);
       parts.push(
-        `<text x="${x}" y="${PAD + 19}" font-family="sans-serif" font-size="16" fill="${STREAK_COLORS.text}">${MONTHS[m]}</text>`,
+        `<text x="${x}" y="${PAD + 19}" font-family="Inter, sans-serif" font-size="16" fill="${STREAK_COLORS.text}">${MONTHS[m]}</text>`,
       );
     }
   }
@@ -63,7 +68,7 @@ export function renderStreakPng(cells, startMonday) {
   DAYS.forEach((name, r) => {
     const cy = gy + r * (CELL + GAP) + CELL / 2 + 5.5;
     parts.push(
-      `<text x="${PAD}" y="${cy}" font-family="sans-serif" font-size="16" fill="${STREAK_COLORS.text}">${name}</text>`,
+      `<text x="${PAD}" y="${cy}" font-family="Inter, sans-serif" font-size="16" fill="${STREAK_COLORS.text}">${name}</text>`,
     );
   });
   for (let r = 0; r < ROWS; r++) {
@@ -84,7 +89,7 @@ export function renderStreakPng(cells, startMonday) {
   let lx = PAD + LABEL_W + gridW - legendW;
   const ly = PAD + MONTH_H + gridH + 12;
   parts.push(
-    `<text x="${lx}" y="${ly + 14}" font-family="sans-serif" font-size="14" fill="${STREAK_COLORS.text}">Less</text>`,
+    `<text x="${lx}" y="${ly + 14}" font-family="Inter, sans-serif" font-size="14" fill="${STREAK_COLORS.text}">Less</text>`,
   );
   lx += 46;
   for (const sample of [0, 1, 4, 7, 12]) {
@@ -94,7 +99,7 @@ export function renderStreakPng(cells, startMonday) {
     lx += sw + sgap;
   }
   parts.push(
-    `<text x="${lx + 2}" y="${ly + 14}" font-family="sans-serif" font-size="14" fill="${STREAK_COLORS.text}">More</text>`,
+    `<text x="${lx + 2}" y="${ly + 14}" font-family="Inter, sans-serif" font-size="14" fill="${STREAK_COLORS.text}">More</text>`,
   );
 
   const svg =
@@ -105,6 +110,11 @@ export function renderStreakPng(cells, startMonday) {
 
   const resvg = new Resvg(svg, {
     fitTo: { mode: "width", value: W * SCALE },
+    font: {
+      fontFiles: [INTER_FONT_FILE],
+      loadSystemFonts: false,
+      defaultFontFamily: "Inter",
+    },
   });
   return resvg.render().asPng();
 }
