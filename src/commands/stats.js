@@ -115,21 +115,26 @@ async function generateStreakGrid(login, token) {
   const DAY = 24 * 60 * 60 * 1000;
   const toKey = (d) => d.toISOString().slice(0, 10);
 
-  // Monday-aligned 26-week window ending with the week containing today,
-  // so each labeled row holds its real weekday.
+  // Monday-aligned week columns covering the trailing 365 days, so each
+  // labeled row holds its real weekday. Edge weeks are partial: days
+  // outside the range stay null and render blank.
   const todayUTC = new Date(
     Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
   );
-  const diffToMonday = (todayUTC.getUTCDay() + 6) % 7;
-  const thisMonday = new Date(todayUTC);
-  thisMonday.setUTCDate(thisMonday.getUTCDate() - diffToMonday);
-  const start = new Date(thisMonday);
-  start.setUTCDate(start.getUTCDate() - 25 * 7);
+  const rangeStart = new Date(todayUTC);
+  rangeStart.setUTCDate(rangeStart.getUTCDate() - 364);
+  const start = new Date(rangeStart);
+  start.setUTCDate(
+    start.getUTCDate() - ((rangeStart.getUTCDay() + 6) % 7),
+  );
+  const totalDays = Math.round((todayUTC - start) / DAY) + 1;
+  const numCols = Math.ceil(totalDays / 7);
 
-  const cells = Array.from({ length: 7 }, () => Array(26).fill(0));
+  const cells = Array.from({ length: 7 }, () => Array(numCols).fill(null));
   let total = 0;
-  for (let i = 0; i < 182; i++) {
+  for (let i = 0; i < totalDays; i++) {
     const d = new Date(start.getTime() + i * DAY);
+    if (d < rangeStart || d > todayUTC) continue;
     const count = commits[toKey(d)] || 0;
     cells[i % 7][Math.floor(i / 7)] = count;
     total += count;
@@ -520,7 +525,7 @@ async function statsStreak(interaction) {
       .setColor(0x24292e)
       .setTitle(`📊 Contribution Streak — @${user.githubLogin}`)
       .setDescription(
-        `Past 182 days · **${fmt(total)}** contributions · **${streak}**-day streak`,
+        `Past 365 days · **${fmt(total)}** contributions · **${streak}**-day streak`,
       )
       .setImage("attachment://streak.png")
       .setFooter({ text: "Darker green = more · Dim = no activity" })

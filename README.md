@@ -33,7 +33,7 @@ Fetches contribution data from the GitHub GraphQL API (`contributionsCollection.
 | `compare <user>` | Compares trailing-365-day totals between the invoker and a specified Discord user                                      |
 | `top`            | Iterates all linked users, fetches each 365-day count, and returns a sorted leaderboard (top 10)                       |
 | `top-day`        | Same pattern as `top` but scoped to the current UTC date; excludes zero-contribution users                             |
-| `streak`         | Fetches the full contribution calendar via GraphQL, renders a 182-day GitHub-style PNG heatmap, and attaches it as the embed image |
+| `streak`         | Fetches the full contribution calendar via GraphQL, renders a 365-day GitHub-style PNG heatmap, and attaches it as the embed image |
 
 All `/stats` and `/github` subcommands are blocked when the guild has any Org-mode channels registered. The command returns an error message indicating that personal linking is disabled.
 

@@ -21,11 +21,12 @@ const MONTHS = [
 ];
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-// cells: 7 rows x 26 cols of contribution counts.
+// cells: 7 rows x N cols of contribution counts (or null for out-of-range
+// days in partial edge weeks, rendered blank).
 // startMonday: UTC Date of the Monday heading column 0.
 export function renderStreakPng(cells, startMonday) {
-  const COLS = 26;
   const ROWS = 7;
+  const COLS = cells[0].length;
   const CELL = 16;
   const GAP = 5;
   const R = 4;
@@ -67,6 +68,7 @@ export function renderStreakPng(cells, startMonday) {
   });
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
+      if (cells[r][c] == null) continue;
       const x = gx + c * (CELL + GAP);
       const y = gy + r * (CELL + GAP);
       parts.push(
