@@ -1,5 +1,6 @@
-import { EmbedBuilder } from "discord.js";
+import { AttachmentBuilder, EmbedBuilder } from "discord.js";
 import { getUser, getAllLogins } from "../database.js";
+import { renderStreakPng } from "../streak-image.js";
 
 function fmt(n) {
   return n.toLocaleString();
@@ -145,25 +146,10 @@ async function generateStreakGrid(login, token) {
     cursor = new Date(cursor.getTime() - DAY);
   }
 
-  // Single glyph everywhere, color-only GitHub-style scale (dark-mode order).
-  const cell = (count) => {
-    if (count === 0) return "\x1b[2;30m█\x1b[0m";
-    if (count <= 2) return "\x1b[2;32m█\x1b[0m";
-    if (count <= 5) return "\x1b[0;32m█\x1b[0m";
-    if (count <= 9) return "\x1b[1;32m█\x1b[0m";
-    return "\x1b[1;32;42m█\x1b[0m";
-  };
+  // GitHub dark-mode greens; empty cells are #151b23 (see streak-image.js).
+  const pngBuffer = renderStreakPng(cells, start);
 
-  const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  const lines = cells.map(
-    (row, r) => dayNames[r] + "  " + row.map(cell).join(" "),
-  );
-
-  const legend =
-    "     Less " + [0, 1, 4, 7, 12].map(cell).join(" ") + " More";
-
-  const block = "```ansi\n" + lines.join("\n") + "\n\n" + legend + "\n```";
-  return { block, total, streak };
+  return { pngBuffer, total, streak };
 }
 
 export async function statsCommand(interaction) {
@@ -523,20 +509,24 @@ async function statsStreak(interaction) {
   await interaction.deferReply({ ephemeral: false });
 
   try {
-    const { block, total, streak } = await generateStreakGrid(
+    const { pngBuffer, total, streak } = await generateStreakGrid(
       user.githubLogin,
       user.accessToken,
     );
+    const attachment = new AttachmentBuilder(pngBuffer, {
+      name: "streak.png",
+    });
     const embed = new EmbedBuilder()
       .setColor(0x24292e)
       .setTitle(`📊 Contribution Streak — @${user.githubLogin}`)
       .setDescription(
-        `Past 182 days · **${fmt(total)}** contributions · **${streak}**-day streak\n\n${block}`,
+        `Past 182 days · **${fmt(total)}** contributions · **${streak}**-day streak`,
       )
+      .setImage("attachment://streak.png")
       .setFooter({ text: "Darker green = more · Dim = no activity" })
       .setTimestamp();
 
-    await interaction.editReply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed], files: [attachment] });
   } catch (err) {
     console.error("Stats streak error:", err);
     await interaction.editReply({

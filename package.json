@@ -8,9 +8,10 @@
     "deploy": "node src/deploy-commands.js"
   },
   "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "discord.js": "^14.13.0",
-    "express": "^4.18.2",
     "dotenv": "^16.3.1",
+    "express": "^4.18.2",
     "pg": "^8.13.0"
   },
   "type": "module"
