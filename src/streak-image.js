@@ -27,17 +27,18 @@ const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 export function renderStreakPng(cells, startMonday) {
   const ROWS = 7;
   const COLS = cells[0].length;
-  const CELL = 22;
+  const CELL_W = 16;
+  const CELL_H = 32;
   const GAP = 6;
-  const R = 5;
+  const R = 4;
   const LABEL_W = 56;
   const MONTH_H = 30;
   const PAD = 22;
   const LEGEND_H = 40;
   const SCALE = 2;
 
-  const gridW = COLS * CELL + (COLS - 1) * GAP;
-  const gridH = ROWS * CELL + (ROWS - 1) * GAP;
+  const gridW = COLS * CELL_W + (COLS - 1) * GAP;
+  const gridH = ROWS * CELL_H + (ROWS - 1) * GAP;
   const W = PAD * 2 + LABEL_W + gridW;
   const H = PAD * 2 + MONTH_H + gridH + LEGEND_H;
   const gx = PAD + LABEL_W;
@@ -52,7 +53,7 @@ export function renderStreakPng(cells, startMonday) {
     const m = d.getUTCMonth();
     if (m !== prevMonth) {
       prevMonth = m;
-      const x = gx + col * (CELL + GAP);
+      const x = gx + col * (CELL_W + GAP);
       parts.push(
         `<text x="${x}" y="${PAD + 19}" font-family="sans-serif" font-size="16" fill="${STREAK_COLORS.text}">${MONTHS[m]}</text>`,
       );
@@ -61,7 +62,7 @@ export function renderStreakPng(cells, startMonday) {
 
   // Day labels + cells.
   DAYS.forEach((name, r) => {
-    const cy = gy + r * (CELL + GAP) + CELL / 2 + 5.5;
+    const cy = gy + r * (CELL_H + GAP) + CELL_H / 2 + 5.5;
     parts.push(
       `<text x="${PAD}" y="${cy}" font-family="sans-serif" font-size="16" fill="${STREAK_COLORS.text}">${name}</text>`,
     );
@@ -69,32 +70,33 @@ export function renderStreakPng(cells, startMonday) {
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
       if (cells[r][c] == null) continue;
-      const x = gx + c * (CELL + GAP);
-      const y = gy + r * (CELL + GAP);
+      const x = gx + c * (CELL_W + GAP);
+      const y = gy + r * (CELL_H + GAP);
       parts.push(
-        `<rect x="${x}" y="${y}" width="${CELL}" height="${CELL}" rx="${R}" fill="${levelColor(cells[r][c])}"/>`,
+        `<rect x="${x}" y="${y}" width="${CELL_W}" height="${CELL_H}" rx="${R}" fill="${levelColor(cells[r][c])}"/>`,
       );
     }
   }
 
-  // Legend, bottom-right like GitHub.
-  const sw = 18;
+  // Legend, bottom-right like GitHub (mini-bars match cell ratio).
+  const sw = 14;
+  const sh = 28;
   const sgap = 5;
   const legendW = 46 + 5 * (sw + sgap) + 50;
   let lx = PAD + LABEL_W + gridW - legendW;
   const ly = PAD + MONTH_H + gridH + 12;
   parts.push(
-    `<text x="${lx}" y="${ly + 14}" font-family="sans-serif" font-size="14" fill="${STREAK_COLORS.text}">Less</text>`,
+    `<text x="${lx}" y="${ly + 19}" font-family="sans-serif" font-size="14" fill="${STREAK_COLORS.text}">Less</text>`,
   );
   lx += 46;
   for (const sample of [0, 1, 4, 7, 12]) {
     parts.push(
-      `<rect x="${lx}" y="${ly}" width="${sw}" height="${sw}" rx="4" fill="${levelColor(sample)}"/>`,
+      `<rect x="${lx}" y="${ly}" width="${sw}" height="${sh}" rx="3" fill="${levelColor(sample)}"/>`,
     );
     lx += sw + sgap;
   }
   parts.push(
-    `<text x="${lx + 2}" y="${ly + 14}" font-family="sans-serif" font-size="14" fill="${STREAK_COLORS.text}">More</text>`,
+    `<text x="${lx + 2}" y="${ly + 19}" font-family="sans-serif" font-size="14" fill="${STREAK_COLORS.text}">More</text>`,
   );
 
   const svg =
