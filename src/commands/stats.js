@@ -111,44 +111,59 @@ async function generateStreakGrid(login, token) {
   }
 
   const now = new Date();
-  const oneDay = 24 * 60 * 60 * 1000;
+  const DAY = 24 * 60 * 60 * 1000;
+  const toKey = (d) => d.toISOString().slice(0, 10);
 
-  const grid = [];
+  // Monday-aligned 26-week window ending with the week containing today,
+  // so each labeled row holds its real weekday.
+  const todayUTC = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+  );
+  const diffToMonday = (todayUTC.getUTCDay() + 6) % 7;
+  const thisMonday = new Date(todayUTC);
+  thisMonday.setUTCDate(thisMonday.getUTCDate() - diffToMonday);
+  const start = new Date(thisMonday);
+  start.setUTCDate(start.getUTCDate() - 25 * 7);
+
+  const cells = Array.from({ length: 7 }, () => Array(26).fill(0));
+  let total = 0;
   for (let i = 0; i < 182; i++) {
-    const d = new Date(now.getTime() - i * oneDay);
-    const key = d.toISOString().slice(0, 10);
-    grid.push({ date: d, count: commits[key] || 0 });
+    const d = new Date(start.getTime() + i * DAY);
+    const count = commits[toKey(d)] || 0;
+    cells[i % 7][Math.floor(i / 7)] = count;
+    total += count;
   }
-  grid.reverse();
+
+  // Current streak: consecutive active days ending today (or yesterday).
+  let streak = 0;
+  let cursor = new Date(todayUTC);
+  if ((commits[toKey(cursor)] || 0) === 0) {
+    cursor = new Date(cursor.getTime() - DAY);
+  }
+  while ((commits[toKey(cursor)] || 0) > 0) {
+    streak++;
+    cursor = new Date(cursor.getTime() - DAY);
+  }
+
+  // Single glyph everywhere, color-only GitHub-style scale (dark-mode order).
+  const cell = (count) => {
+    if (count === 0) return "\x1b[2;30m█\x1b[0m";
+    if (count <= 2) return "\x1b[2;32m█\x1b[0m";
+    if (count <= 5) return "\x1b[0;32m█\x1b[0m";
+    if (count <= 9) return "\x1b[1;32m█\x1b[0m";
+    return "\x1b[1;32;42m█\x1b[0m";
+  };
 
   const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  const lines = [];
+  const lines = cells.map(
+    (row, r) => dayNames[r] + "  " + row.map(cell).join(" "),
+  );
 
-  for (let row = 0; row < 7; row++) {
-    let line = dayNames[row] + " ";
-    for (let col = 0; col < 26; col++) {
-      const idx = col * 7 + row;
-      if (idx >= grid.length) {
-        line += " ";
-        continue;
-      }
-      const count = grid[idx].count;
-      if (count === 0) {
-        line += "\x1b[0;100m \x1b[0m";
-      } else if (count <= 3) {
-        line += "\x1b[2;32m▓\x1b[0m";
-      } else if (count <= 6) {
-        line += "\x1b[0;32m█\x1b[0m";
-      } else if (count <= 10) {
-        line += "\x1b[1;32m▓\x1b[0m";
-      } else {
-        line += "\x1b[1;32m█\x1b[0m";
-      }
-    }
-    lines.push(line);
-  }
+  const legend =
+    "     Less " + [0, 1, 4, 7, 12].map(cell).join(" ") + " More";
 
-  return "```ansi\n" + lines.join("\n") + "\n```";
+  const block = "```ansi\n" + lines.join("\n") + "\n\n" + legend + "\n```";
+  return { block, total, streak };
 }
 
 export async function statsCommand(interaction) {
@@ -505,13 +520,27 @@ async function statsStreak(interaction) {
     });
   }
 
-  const grid = await generateStreakGrid(user.githubLogin, user.accessToken);
-  const embed = new EmbedBuilder()
-    .setColor(0x24292e)
-    .setTitle(`📊 Contribution Streak — @${user.githubLogin}`)
-    .setDescription(`Past 182 days\n\n${grid}`)
-    .setFooter({ text: "█ ▓ ░ = high → low | ⬛ = no commits" })
-    .setTimestamp();
+  await interaction.deferReply({ ephemeral: false });
 
-  await interaction.reply({ embeds: [embed], ephemeral: false });
+  try {
+    const { block, total, streak } = await generateStreakGrid(
+      user.githubLogin,
+      user.accessToken,
+    );
+    const embed = new EmbedBuilder()
+      .setColor(0x24292e)
+      .setTitle(`📊 Contribution Streak — @${user.githubLogin}`)
+      .setDescription(
+        `Past 182 days · **${fmt(total)}** contributions · **${streak}**-day streak\n\n${block}`,
+      )
+      .setFooter({ text: "Darker green = more · Dim = no activity" })
+      .setTimestamp();
+
+    await interaction.editReply({ embeds: [embed] });
+  } catch (err) {
+    console.error("Stats streak error:", err);
+    await interaction.editReply({
+      content: "❌ Failed to fetch contribution calendar. Try again later.",
+    });
+  }
 }
