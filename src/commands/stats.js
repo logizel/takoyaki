@@ -122,7 +122,7 @@ async function generateStreakGrid(login, token) {
     Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
   );
   const rangeStart = new Date(todayUTC);
-  rangeStart.setUTCDate(rangeStart.getUTCDate() - 364);
+  rangeStart.setUTCDate(rangeStart.getUTCDate() - 181);
   const start = new Date(rangeStart);
   start.setUTCDate(
     start.getUTCDate() - ((rangeStart.getUTCDay() + 6) % 7),
@@ -525,7 +525,7 @@ async function statsStreak(interaction) {
       .setColor(0x24292e)
       .setTitle(`📊 Contribution Streak — @${user.githubLogin}`)
       .setDescription(
-        `Past 365 days · **${fmt(total)}** contributions · **${streak}**-day streak`,
+        `Past 182 days · **${fmt(total)}** contributions · **${streak}**-day streak`,
       )
       .setImage("attachment://streak.png")
       .setFooter({ text: "Darker green = more · Dim = no activity" })
