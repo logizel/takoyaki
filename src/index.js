@@ -54,6 +54,11 @@ app.get("/auth/callback", oauthCallbackHandler);
 
 const PORT = process.env.PORT || 3000;
 
+if (!process.env.GITHUB_WEBHOOK_SECRET || process.env.GITHUB_WEBHOOK_SECRET.trim().length === 0) {
+  console.error("FATAL: GITHUB_WEBHOOK_SECRET is not set or is empty. Refusing to start.");
+  process.exit(1);
+}
+
 app.listen(PORT, () => {
   console.log(`Express server listening on port ${PORT}`);
 });

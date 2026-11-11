@@ -355,7 +355,7 @@ async function filterGuildMembers(interaction, users) {
   }
   
   if (!members) {
-    return users; // Return unfiltered if fetch fails
+    return []; // Fail closed: never leak linked users outside the invoking guild
   }
   
   const memberIds = new Set(members.map(m => m.id));
