@@ -19,6 +19,11 @@ import { linkCommand } from "./commands/link.js";
 import { unlinkCommand } from "./commands/unlink.js";
 import { statsCommand } from "./commands/stats.js";
 import { setchannelCommand } from "./commands/setchannel.js";
+import {
+  handleRequestReviewComponent,
+  isRequestReviewComponent,
+  requestReviewCommand,
+} from "./commands/request-review.js";
 import { setTrackedChannel, getTrackedChannelsByMode, setChannel, deleteTrackedChannel } from "./database.js";
 
 const app = express();
@@ -73,6 +78,16 @@ client.once(Events.ClientReady, (c) => {
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {
+  if (
+    (interaction.isButton() ||
+      interaction.isStringSelectMenu() ||
+      interaction.isUserSelectMenu()) &&
+    isRequestReviewComponent(interaction.customId)
+  ) {
+    await handleRequestReviewComponent(interaction);
+    return;
+  }
+
   if (interaction.isButton()) {
     if (interaction.customId === "org_mode") {
       const modal = new ModalBuilder()
@@ -178,6 +193,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
   } else if (commandName === "setchannel") {
     await setchannelCommand(interaction);
+  } else if (commandName === "request-review") {
+    await requestReviewCommand(interaction);
   } else if (commandName === "stats") {
     const orgChannels = await getTrackedChannelsByMode(guildId, 'org');
     if (orgChannels.length > 0) {

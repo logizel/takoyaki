@@ -12,6 +12,13 @@ const commands = [
     .setDescription('Set this channel for Takoyaki notifications.')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
   new SlashCommandBuilder()
+    .setName('request-review')
+    .setDescription('Ask a server member to review and merge an open pull request.')
+    .addUserOption(opt => opt
+      .setName('user')
+      .setDescription('The server member who should review and merge the pull request.')
+      .setRequired(false)),
+  new SlashCommandBuilder()
     .setName('stats')
     .setDescription('View GitHub commit statistics.')
     .addSubcommand(sub => sub.setName('me').setDescription('Your commit count today and in the past 365 days.'))

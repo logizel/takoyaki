@@ -168,6 +168,14 @@ export async function getTrackedChannelsByMode(guildId, mode) {
   return rows;
 }
 
+export async function getTrackedChannel(guildId, channelId) {
+  const { rows } = await pool.query(
+    'SELECT * FROM tracked_channels WHERE guild_id = $1 AND channel_id = $2',
+    [guildId, channelId]
+  );
+  return rows.length > 0 ? rows[0] : null;
+}
+
 export async function getOrgChannelsByOrgName(orgName) {
   const { rows } = await pool.query(
     'SELECT * FROM tracked_channels WHERE mode = $1 AND lower(org_name) = lower($2)',

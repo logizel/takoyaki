@@ -23,6 +23,18 @@ Initiates the GitHub OAuth user-authorization flow. Creates an OAuth state recor
 
 Removes the invoking user's record from the `users` table. Returns an error if no link exists.
 
+### `/request-review`
+
+Available in channels configured with Org Mode. Any server member can use it to ask another member of the same server to review and merge an open pull request:
+
+1. Run `/request-review` (optionally with `user:@member`).
+2. Pick one of the organization's recently active repositories from an ephemeral menu (most recent push first, 25 per page).
+3. Pick an open pull request (most recently updated first, 25 per page).
+4. If `user` was omitted, pick the reviewer from a member menu.
+5. The bot posts a public message in the same channel that mentions the reviewer and links to the PR.
+
+Menus are ephemeral, and only the selected reviewer is mentioned. The GitHub App must be installed on the organization, and `GITHUB_APP_ID` / `GITHUB_APP_PRIVATE_KEY` must be configured.
+
 ### `/stats`
 
 Fetches contribution data from the GitHub GraphQL API (`contributionsCollection.contributionCalendar.totalContributions`). Supports five subcommands:
@@ -82,6 +94,8 @@ The `formatMessage` function produces text messages from webhook payloads. The p
 | `DISCORD_CLIENT_ID`     | Discord application client ID                                        |
 | `DISCORD_CHANNEL_ID`    | Fallback channel for events when no standard channels are configured |
 | `GITHUB_APP_NAME`       | GitHub App name (used in installation URLs)                          |
+| `GITHUB_APP_ID`          | GitHub App ID (used to sign API requests for `/request-review`)      |
+| `GITHUB_APP_PRIVATE_KEY` | GitHub App private key in PEM format (escaped newlines or base64)    |
 | `GITHUB_CLIENT_ID`      | GitHub App OAuth client ID                                           |
 | `GITHUB_CLIENT_SECRET`  | GitHub App OAuth client secret                                       |
 | `GITHUB_WEBHOOK_SECRET` | Shared secret for webhook HMAC verification                          |
@@ -116,7 +130,7 @@ Repository permissions:
 
 Event subscriptions: **Push**, **Pull requests**, **Issues**, **Repository**, and optionally **Workflow runs**. The `Workflow runs` event requires the Actions read permission.
 
-Org mode does not use the OAuth callback. Install the GitHub App on the organization and run `/setchannel` → Org Mode; events are routed by the repository owner.
+Org mode does not use the OAuth callback. Install the GitHub App on the organization and run `/setchannel` → Org Mode; events are routed by the repository owner. Adding the App's **App ID** and **private key** to the environment (`GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`) also enables `/request-review`, which lists the org's repositories and open pull requests through the App installation. No additional repository permissions are required beyond **Metadata: Read** and **Pull requests: Read**.
 
 To register slash commands with Discord:
 
