@@ -1,6 +1,8 @@
 import pg from 'pg';
 import crypto from 'crypto';
 
+const OAUTH_STATE_TTL_MS = 15 * 60 * 1000;
+
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
 });
@@ -104,7 +106,7 @@ export async function getOAuthState(state) {
   const { rows } = await pool.query('SELECT * FROM oauth_states WHERE state = $1', [state]);
   if (rows.length === 0) return null;
   const row = rows[0];
-  if (Date.now() - row.created_at > 5 * 60 * 1000) {
+  if (Date.now() - row.created_at > OAUTH_STATE_TTL_MS) {
     await pool.query('DELETE FROM oauth_states WHERE state = $1', [state]);
     return null;
   }
@@ -167,7 +169,10 @@ export async function getTrackedChannelsByMode(guildId, mode) {
 }
 
 export async function getOrgChannelsByOrgName(orgName) {
-  const { rows } = await pool.query('SELECT * FROM tracked_channels WHERE mode = $1 AND org_name = $2', ['org', orgName]);
+  const { rows } = await pool.query(
+    'SELECT * FROM tracked_channels WHERE mode = $1 AND lower(org_name) = lower($2)',
+    ['org', orgName]
+  );
   return rows;
 }
 

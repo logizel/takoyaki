@@ -13,7 +13,7 @@ import {
   TextInputStyle,
 } from "discord.js";
 import express from "express";
-import { oauthCallbackHandler } from "./oauth-handler.js";
+import { oauthCallbackHandler, setupCallbackHandler } from "./oauth-handler.js";
 import { webhookHandler } from "./webhook-handler.js";
 import { linkCommand } from "./commands/link.js";
 import { unlinkCommand } from "./commands/unlink.js";
@@ -51,6 +51,7 @@ app.use("/webhook", (err, req, res, next) => {
 app.use(express.json());
 app.get("/health", (_, res) => res.send("OK"));
 app.get("/auth/callback", oauthCallbackHandler);
+app.get("/auth/setup", setupCallbackHandler);
 
 const PORT = process.env.PORT || 3000;
 
@@ -138,7 +139,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
   if (interaction.isModalSubmit()) {
     if (interaction.customId === "org_modal") {
-      const orgName = interaction.fields.getTextInputValue("org_name").trim().toLowerCase();
+      const orgName = interaction.fields.getTextInputValue("org_name").trim();
       if (!orgName) {
         return interaction.reply({ content: "❌ Organization name is required.", ephemeral: true });
       }
@@ -146,7 +147,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       const appName = process.env.GITHUB_APP_NAME;
       const installUrl = `https://github.com/apps/${appName}/installations/new`;
       await interaction.update({
-        content: `✅ **Org Mode** activated for **${orgName}**.\n\nInstall the GitHub App on your org:\n${installUrl}\n\nAfter installing, push/PR/issue events from any **${orgName}** repo will appear in this channel.`,
+        content: `✅ **Org Mode** activated for **${orgName}**.\n\nInstall the GitHub App on your org:\n${installUrl}\n\nNo Discord account linking is needed in org mode — events are routed by repository owner.\n\nAfter installing, push/PR/issue events from any **${orgName}** repo will appear in this channel.`,
         embeds: [],
         components: [],
       });

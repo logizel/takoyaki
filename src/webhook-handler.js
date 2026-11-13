@@ -1,6 +1,43 @@
 import crypto from "crypto";
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Events } from "discord.js";
 import { readData, addCommitCount, getOrgChannelsByOrgName } from "./database.js";
+
+const DISCORD_READY_TIMEOUT_MS = 8000;
+const ROUTABLE_EVENTS = new Set(["push", "pull_request", "issues", "repository", "workflow_run"]);
+let readyPromise = null;
+
+function waitForDiscordReady(client, timeoutMs = DISCORD_READY_TIMEOUT_MS) {
+  if (client.isReady()) return Promise.resolve(true);
+
+  if (!readyPromise) {
+    readyPromise = new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        readyPromise = null;
+        resolve(false);
+      }, timeoutMs);
+
+      client.once(Events.ClientReady, () => {
+        clearTimeout(timer);
+        resolve(true);
+      });
+    });
+  }
+
+  return readyPromise;
+}
+
+async function getTextChannel(client, channelId) {
+  let channel = client.channels.cache.get(channelId);
+  if (!channel) {
+    try {
+      channel = await client.channels.fetch(channelId);
+    } catch (error) {
+      console.warn(`Could not fetch Discord channel ${channelId}:`, error.message);
+      return null;
+    }
+  }
+  return channel && channel.isTextBased() ? channel : null;
+}
 
 async function getAllStandardChannels() {
   const data = await readData();
@@ -67,7 +104,7 @@ function getOwnCommits(payload, senderLogin) {
   });
 }
 
-function formatMessage(discordId, event, payload, orgSender) {
+function formatMessage(discordId, event, payload, orgSender, isOrgMode = false) {
   const sender = orgSender || payload.sender?.login;
   const repo = payload.repository?.name;
   const isPrivate = payload.repository?.private;
@@ -78,7 +115,11 @@ function formatMessage(discordId, event, payload, orgSender) {
 
   switch (event) {
     case "push": {
-      const ownCommits = getOwnCommits(payload, sender);
+      // Standard mode only pings for commits the pusher authored. Org mode
+      // announces every distinct commit pushed to the organization.
+      const ownCommits = isOrgMode
+        ? (payload.commits || []).filter((c) => c.distinct !== false)
+        : getOwnCommits(payload, sender);
       const count = ownCommits.length;
       if (count === 0) return null;
       const commitsMsgs = ownCommits.map(c => (c.message || '').split('\n')[0]).filter(Boolean);
@@ -206,26 +247,41 @@ export async function webhookHandler(req, res) {
     return res.status(200).send("OK");
   }
 
+  const client = global.discordClient;
+  if (!client) {
+    console.error("Discord client is not available");
+    return res.status(503).send("Discord client unavailable");
+  }
+
+  if (!(await waitForDiscordReady(client))) {
+    console.warn(
+      `Discord client was not ready; rejecting ${event} delivery ${req.headers["x-github-delivery"] || ""}`
+    );
+    return res.status(503).send("Discord client not ready");
+  }
+
   const repoOwner = parsed.repository?.owner?.login || parsed.workflow_run?.repository?.owner?.login;
   const orgChannels = repoOwner ? await getOrgChannelsByOrgName(repoOwner) : [];
 
   if (orgChannels.length > 0) {
-    const message = formatMessage(null, event, parsed, sender);
+    const message = formatMessage(null, event, parsed, sender, true);
     if (!message) {
+      if (ROUTABLE_EVENTS.has(event)) {
+        console.log(`No Discord message for ${event}.${parsed.action || ""} in ${repoOwner}`);
+      }
       return res.status(200).send("OK");
     }
     const components = getEventComponents(event, parsed);
-    const client = global.discordClient;
-    if (client) {
-      for (const tc of orgChannels) {
-        try {
-          const channel = client.channels.cache.get(tc.channel_id);
-          if (channel && channel.isTextBased()) {
-            await channel.send({ content: message, components });
-          }
-        } catch (error) {
-          console.error("Failed to send webhook message:", error);
+    for (const tc of orgChannels) {
+      try {
+        const channel = await getTextChannel(client, tc.channel_id);
+        if (!channel) {
+          console.warn(`Org channel ${tc.channel_id} for ${repoOwner} not found or not text-based`);
+          continue;
         }
+        await channel.send({ content: message, components });
+      } catch (error) {
+        console.error(`Failed to send ${event} to org channel ${tc.channel_id}:`, error);
       }
     }
     return res.status(200).send("OK");
@@ -233,6 +289,11 @@ export async function webhookHandler(req, res) {
 
   const user = await getUserByGithubLogin(sender);
   if (!user) {
+    if (ROUTABLE_EVENTS.has(event)) {
+      console.log(
+        `Ignoring ${event}.${parsed.action || ""} for ${repoOwner || "unknown owner"}/${parsed.repository?.name || parsed.workflow_run?.repository?.name || "unknown repo"} from ${sender}: no org channel and sender is not linked`
+      );
+    }
     return res.status(200).send("OK");
   }
 
@@ -243,44 +304,46 @@ export async function webhookHandler(req, res) {
 
   const components = getEventComponents(event, parsed);
   const standardChannels = await getAllStandardChannels();
-  const client = global.discordClient;
-  if (client) {
-    let sentToAny = false;
-    const userGuildIds = new Set();
-    for (const tc of standardChannels) {
-      if (userGuildIds.has(tc.guild_id)) continue;
-      const guild = client.guilds.cache.get(tc.guild_id);
-      if (!guild) continue;
-      try {
-        await guild.members.fetch(user.discordId);
-        userGuildIds.add(tc.guild_id);
-      } catch {
-        // user not in this guild
-      }
+
+  let sentToAny = false;
+  const userGuildIds = new Set();
+  for (const tc of standardChannels) {
+    if (userGuildIds.has(tc.guild_id)) continue;
+    const guild = client.guilds.cache.get(tc.guild_id);
+    if (!guild) continue;
+    try {
+      await guild.members.fetch(user.discordId);
+      userGuildIds.add(tc.guild_id);
+    } catch {
+      // user not in this guild
     }
-    const relevantChannels = standardChannels.filter(tc => userGuildIds.has(tc.guild_id));
-    for (const tc of relevantChannels) {
+  }
+  const relevantChannels = standardChannels.filter(tc => userGuildIds.has(tc.guild_id));
+  for (const tc of relevantChannels) {
+    try {
+      const channel = await getTextChannel(client, tc.channel_id);
+      if (!channel) {
+        console.warn(`Standard channel ${tc.channel_id} not found or not text-based`);
+        continue;
+      }
+      await channel.send({ content: message, components });
+      sentToAny = true;
+    } catch (error) {
+      console.error(`Failed to send ${event} to standard channel ${tc.channel_id}:`, error);
+    }
+  }
+  if (!sentToAny) {
+    const fallback = process.env.DISCORD_CHANNEL_ID;
+    if (fallback) {
       try {
-        const channel = client.channels.cache.get(tc.channel_id);
-        if (channel && channel.isTextBased()) {
+        const channel = await getTextChannel(client, fallback);
+        if (channel) {
           await channel.send({ content: message, components });
-          sentToAny = true;
+        } else {
+          console.warn(`Fallback channel ${fallback} not found or not text-based`);
         }
       } catch (error) {
-        console.error("Failed to send webhook message:", error);
-      }
-    }
-    if (!sentToAny) {
-      const fallback = process.env.DISCORD_CHANNEL_ID;
-      if (fallback) {
-        try {
-          const channel = client.channels.cache.get(fallback);
-          if (channel && channel.isTextBased()) {
-            await channel.send({ content: message, components });
-          }
-        } catch (error) {
-          console.error("Failed to send webhook message to fallback:", error);
-        }
+        console.error("Failed to send webhook message to fallback:", error);
       }
     }
   }

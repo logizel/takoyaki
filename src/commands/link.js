@@ -4,15 +4,20 @@ import { createOAuthState, getUser } from '../database.js';
 export async function linkCommand(interaction) {
   const existingUser = await getUser(interaction.user.id);
   const appName = process.env.GITHUB_APP_NAME;
-  if (!appName) {
+  const clientId = process.env.GITHUB_CLIENT_ID;
+  const clientSecret = process.env.GITHUB_CLIENT_SECRET;
+  const baseUrl = process.env.BASE_URL;
+  if (!appName || !clientId || !clientSecret || !baseUrl) {
     return interaction.reply({
-      content: '❌ GITHUB_APP_NAME is not configured.',
+      content: '❌ GitHub is not fully configured. Set GITHUB_APP_NAME, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, and BASE_URL.',
       ephemeral: true,
     });
   }
 
   const state = await createOAuthState(interaction.user.id, interaction.token);
-  const installUrl = `https://github.com/apps/${appName}/installations/new?state=${state}`;
+  const redirectUri = `${baseUrl.replace(/\/$/, '')}/auth/callback`;
+  const oauthUrl = `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(state)}&scope=read:user`;
+  const installUrl = `https://github.com/apps/${appName}/installations/new`;
 
   let title = '🔗 Link GitHub Account';
   let color = 0x24292e;
@@ -26,11 +31,11 @@ export async function linkCommand(interaction) {
     .setColor(color)
     .setTitle(title)
     .setDescription(
-      'Click the button below to install Takoyaki on your GitHub account and authorize it.\n\n' +
-      'Once installed, GitHub events from **all your repos** will ping you here in Discord.'
+      'Click **Link GitHub Account** to authorize Takoyaki with your GitHub account.\n\n' +
+      'To receive repository events, also install the GitHub App on the account or organization that owns the repos using **Install GitHub App**.'
     )
     .addFields(
-      { name: '📋 What happens next', value: 'After authorizing, pushes, PRs, issues, and repo creation will notify you.' },
+      { name: '📋 What happens next', value: 'Your GitHub identity is linked for `/stats`. In standard mode, your events are posted to the configured channel with a mention.' },
       { name: '🔒 Privacy', value: 'Private repos will show as "private repo" without exposing the name.' }
     )
     .setTimestamp()
@@ -39,6 +44,10 @@ export async function linkCommand(interaction) {
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setLabel(existingUser ? 'Re-link GitHub Account' : 'Link GitHub Account')
+      .setStyle(ButtonStyle.Link)
+      .setURL(oauthUrl),
+    new ButtonBuilder()
+      .setLabel('Install GitHub App')
       .setStyle(ButtonStyle.Link)
       .setURL(installUrl)
   );

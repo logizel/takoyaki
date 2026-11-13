@@ -4,7 +4,7 @@ A Discord bot that monitors GitHub repository/organization activity and pings ev
 
 ## System Overview
 
-The application runs as a Node.js Express server that simultaneously operates a Discord.js client. GitHub sends webhook events to the Express endpoint; the bot verifies the payload signature, resolves the sender, determines the target channel(s) from the database, and posts a formatted message with a contextual link button pointing to the relevant GitHub page (repository, PR, issue, or workflow run). A separate OAuth callback handler links Discord users to GitHub accounts via the GitHub App OAuth flow. The bot also supports CI/CD workflow run events for organization-mode channels.
+The application runs as a Node.js Express server that simultaneously operates a Discord.js client. GitHub sends webhook events to the Express endpoint; the bot verifies the payload signature, resolves the sender, determines the target channel(s) from the database, and posts a formatted message with a contextual link button pointing to the relevant GitHub page (repository, PR, issue, or workflow run). A separate OAuth callback handler links Discord users to GitHub accounts, while GitHub App installation redirects are acknowledged by a setup handler. The bot also supports CI/CD workflow run events for organization-mode channels.
 
 ## Commands
 
@@ -13,11 +13,11 @@ The application runs as a Node.js Express server that simultaneously operates a 
 Administrator-only. Initializes channel configuration in the current text channel. Presents an interactive mode-selection dialog:
 
 - **Standard Mode**: Registers the channel as the server's personal-activity destination. Linked users' push, pull request, issue, and repository events are posted here with Discord mentions. Limited to one Standard channel per guild; selecting a replacement triggers a confirmation prompt.
-- **Org Mode**: Opens a modal to input a GitHub organization name. Registers the channel to receive anonymized events (GitHub username only, no Discord mention) from any repository owned by that organization. Unlimited Org channels per guild; each targets a distinct organization.
+- **Org Mode**: Opens a modal to input a GitHub organization name. Registers the channel to receive anonymized events (GitHub username only, no Discord mention) from any repository owned by that organization. Unlimited Org channels per guild; each targets a distinct organization. Organization names are matched case-insensitively against the repository owner. No Discord account linking is required in this mode.
 
 ### `/github link`
 
-Initiates the GitHub OAuth flow. Creates an OAuth state record in the database, generates a GitHub App installation URL incorporating the state parameter, and responds with an ephemeral link-button embed. After the user completes authorization, the callback handler exchanges the authorization code for an access token, fetches the GitHub user profile, and persists the mapping in the `users` table.
+Initiates the GitHub OAuth user-authorization flow. Creates an OAuth state record in the database, generates a GitHub OAuth authorize URL incorporating the state parameter, and responds with an ephemeral link-button embed. The embed also includes an **Install GitHub App** button for granting repository access. After the user completes authorization, the callback handler exchanges the authorization code for an access token, fetches the GitHub user profile, and persists the mapping in the `users` table.
 
 ### `/github unlink`
 
@@ -54,7 +54,7 @@ Commit counts from `push` events are recorded in the `commits` table for `/stats
 | ------------------ | -------------------------------------------------------- | ---------------------------- | ----------------------------------------- |
 | `users`            | `discord_id`, `github_login`, `access_token`             | PK: `discord_id`             | Discord-to-GitHub account mappings        |
 | `channels`         | `guild_id`, `channel_id`                                 | PK: `guild_id`               | Legacy single-channel config (deprecated) |
-| `oauth_states`     | `state`, `discord_id`, `interaction_token`, `created_at` | PK: `state`                  | OAuth state tokens (5-minute TTL)         |
+| `oauth_states`     | `state`, `discord_id`, `interaction_token`, `created_at` | PK: `state`                  | OAuth state tokens (15-minute TTL)        |
 | `commits`          | `discord_id`, `date`, `count`                            | PK: `(discord_id, date)`     | Daily commit aggregation                  |
 | `tracked_channels` | `guild_id`, `channel_id`, `mode`, `org_name`             | PK: `(guild_id, channel_id)` | Per-channel mode configuration            |
 
@@ -91,7 +91,32 @@ The `formatMessage` function produces text messages from webhook payloads. The p
 
 ## Deployment
 
-The Express server binds to `$PORT` (default 3000). GitHub delivers webhooks to `{BASE_URL}/webhook` and OAuth redirects to `{BASE_URL}/auth/callback`. A GitHub Pages landing page is served from `docs/index.html`.
+The Express server binds to `$PORT` (default 3000). GitHub delivers webhooks to `{BASE_URL}/webhook`, OAuth redirects to `{BASE_URL}/auth/callback`, and GitHub App installation redirects to `{BASE_URL}/auth/setup`. A GitHub Pages landing page is served from `docs/index.html`.
+
+### GitHub App configuration
+
+Set the following in the GitHub App settings:
+
+| Setting | Value |
+| --- | --- |
+| User authorization callback URL | `{BASE_URL}/auth/callback` |
+| Setup URL | `{BASE_URL}/auth/setup` |
+| Webhook URL | `{BASE_URL}/webhook` |
+| Webhook secret | Same value as `GITHUB_WEBHOOK_SECRET` |
+
+Repository permissions:
+
+| Permission | Access | Purpose |
+| --- | --- | --- |
+| Contents | Read | Push events and commit metadata |
+| Issues | Read | Issue events |
+| Pull requests | Read | Pull request events |
+| Metadata | Read | Required baseline |
+| Actions | Read | Optional; required for `workflow_run` events |
+
+Event subscriptions: **Push**, **Pull requests**, **Issues**, **Repository**, and optionally **Workflow runs**. The `Workflow runs` event requires the Actions read permission.
+
+Org mode does not use the OAuth callback. Install the GitHub App on the organization and run `/setchannel` → Org Mode; events are routed by the repository owner.
 
 To register slash commands with Discord:
 

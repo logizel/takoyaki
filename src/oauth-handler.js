@@ -23,6 +23,61 @@ const DARK_THEME = `
   </style>
 `;
 
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  }[char]));
+}
+
+function renderPage({ title, icon, iconTone = '', heading, paragraphs, footer = '' }) {
+  const body = paragraphs.map((paragraph) => `<p>${paragraph}</p>`).join('\n          ');
+  return `<!DOCTYPE html>
+      <html><head><title>${title}</title>${DARK_THEME}</head>
+      <body>
+        <div class="card">
+          <div class="icon ${iconTone}">${icon}</div>
+          <h1>${heading}</h1>
+          ${body}
+          ${footer}
+        </div>
+      </body></html>`;
+}
+
+function renderSetupPage(setupAction, installationId) {
+  const safeInstallationId = installationId ? escapeHtml(installationId) : null;
+
+  if (setupAction === 'request') {
+    return renderPage({
+      title: 'Installation Pending Approval',
+      icon: '⏳',
+      heading: 'Installation Request Submitted',
+      paragraphs: [
+        'An organization owner needs to approve the Takoyaki GitHub App installation.',
+        'Once approved, events from the organization will start posting in Discord.',
+        'You can close this tab and return to Discord.',
+      ],
+    });
+  }
+
+  return renderPage({
+    title: 'GitHub App Installed',
+    icon: '✅',
+    iconTone: 'success',
+    heading: 'GitHub App Installed',
+    paragraphs: [
+      'Takoyaki is installed and ready to receive GitHub events.',
+      'You can close this tab and return to Discord.',
+    ],
+    footer: safeInstallationId
+      ? `<p><small>Installation ID: <code>${safeInstallationId}</code></small></p>`
+      : '',
+  });
+}
+
 async function sendEphemeralFollowup(token, content) {
   try {
     await fetch(`https://discord.com/api/webhooks/${process.env.DISCORD_CLIENT_ID}/${token}`, {
@@ -38,21 +93,43 @@ async function sendEphemeralFollowup(token, content) {
   }
 }
 
+export function setupCallbackHandler(req, res) {
+  const installationId = typeof req.query.installation_id === 'string' ? req.query.installation_id : null;
+  const setupAction = typeof req.query.setup_action === 'string' ? req.query.setup_action : null;
+  console.log(
+    `GitHub App setup redirect: setup_action=${setupAction || 'unknown'} installation_id=${installationId || 'unknown'}`
+  );
+  return res.send(renderSetupPage(setupAction, installationId));
+}
+
 export async function oauthCallbackHandler(req, res) {
-  const { code, state } = req.query;
+  const code = typeof req.query.code === 'string' ? req.query.code : null;
+  const state = typeof req.query.state === 'string' ? req.query.state : null;
+  const installationId = typeof req.query.installation_id === 'string' ? req.query.installation_id : null;
+  const setupAction = typeof req.query.setup_action === 'string' ? req.query.setup_action : null;
+
+  // GitHub also redirects App installations here when the App's Setup URL
+  // points at this route. That is not an OAuth callback, so it has no code
+  // (and may not have a state). Show the install result instead of an error.
+  if (!code && (installationId || setupAction)) {
+    console.log(
+      `GitHub App install redirected to /auth/callback: setup_action=${setupAction || 'unknown'} installation_id=${installationId || 'unknown'}`
+    );
+    return res.send(renderSetupPage(setupAction, installationId));
+  }
 
   const stateData = await getOAuthState(state);
   if (!stateData) {
-    return res.send(`<!DOCTYPE html>
-      <html><head><title>Authentication Expired</title>${DARK_THEME}</head>
-      <body>
-        <div class="card">
-          <div class="icon error">❌</div>
-          <h1>Authentication Expired</h1>
-          <p>The OAuth state has expired or is invalid.</p>
-          <p>Please run <code>/github link</code> again in Discord.</p>
-        </div>
-      </body></html>`);
+    return res.send(renderPage({
+      title: 'Authentication Expired',
+      icon: '❌',
+      iconTone: 'error',
+      heading: 'Authentication Expired',
+      paragraphs: [
+        'The OAuth state has expired or is invalid.',
+        'Please run <code>/github link</code> again in Discord.',
+      ],
+    }));
   }
 
   const token = stateData.interaction_token;
@@ -81,6 +158,8 @@ export async function oauthCallbackHandler(req, res) {
     const userData = await userResponse.json();
     if (!userData.login) throw new Error('Failed to fetch GitHub user');
 
+    const safeLogin = escapeHtml(userData.login);
+
     await setUser(stateData.discord_id, { githubLogin: userData.login, accessToken: tokenData.access_token });
     await deleteOAuthState(state);
 
@@ -96,28 +175,28 @@ export async function oauthCallbackHandler(req, res) {
       console.warn(`Failed to send DM to ${stateData.discord_id}:`, dmError.message);
     }
 
-    return res.send(`<!DOCTYPE html>
-      <html><head><title>Success</title>${DARK_THEME}</head>
-      <body>
-        <div class="card">
-          <div class="icon success">✅</div>
-          <h1>Successfully Linked!</h1>
-          <p>Your Discord account has been linked to <strong>@${userData.login}</strong>.</p>
-          <p>You can close this tab and return to Discord.</p>
-        </div>
-      </body></html>`);
+    return res.send(renderPage({
+      title: 'Success',
+      icon: '✅',
+      iconTone: 'success',
+      heading: 'Successfully Linked!',
+      paragraphs: [
+        `Your Discord account has been linked to <strong>@${safeLogin}</strong>.`,
+        'You can close this tab and return to Discord.',
+      ],
+    }));
   } catch (error) {
     console.error('OAuth callback error:', error);
     await sendEphemeralFollowup(token, `❌ **Takoyaki** failed to link your GitHub account. Please try \`/github link\` again.`);
-    return res.send(`<!DOCTYPE html>
-      <html><head><title>Authentication Failed</title>${DARK_THEME}</head>
-      <body>
-        <div class="card">
-          <div class="icon error">❌</div>
-          <h1>Authentication Failed</h1>
-          <p>Something went wrong during authentication.</p>
-          <p>Please run <code>/github link</code> again in Discord.</p>
-        </div>
-      </body></html>`);
+    return res.send(renderPage({
+      title: 'Authentication Failed',
+      icon: '❌',
+      iconTone: 'error',
+      heading: 'Authentication Failed',
+      paragraphs: [
+        'Something went wrong during authentication.',
+        'Please run <code>/github link</code> again in Discord.',
+      ],
+    }));
   }
 }
