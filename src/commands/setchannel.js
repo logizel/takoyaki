@@ -1,5 +1,4 @@
-import { EmbedBuilder, PermissionFlagsBits } from 'discord.js';
-import { setChannel } from '../database.js';
+import { EmbedBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 
 export async function setchannelCommand(interaction) {
   if (!interaction.memberPermissions.has(PermissionFlagsBits.Administrator)) {
@@ -9,13 +8,22 @@ export async function setchannelCommand(interaction) {
     });
   }
 
-  setChannel(interaction.guildId, interaction.channelId);
-
   const embed = new EmbedBuilder()
     .setColor(0x28a745)
-    .setTitle('✅ Channel Set for Notifications')
-    .setDescription(`Takoyaki will now send GitHub notifications to <#${interaction.channelId}>.`)
+    .setTitle('📢 Configure Channel')
+    .setDescription(`Set up how this channel (<#${interaction.channelId}>) behaves.\n\nChoose a mode:`)
     .setTimestamp();
 
-  await interaction.reply({ embeds: [embed] });
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('standard_mode')
+      .setLabel('📋 Standard Mode')
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId('org_mode')
+      .setLabel('🏢 Org Mode')
+      .setStyle(ButtonStyle.Secondary),
+  );
+
+  await interaction.reply({ embeds: [embed], components: [row] });
 }
