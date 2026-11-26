@@ -337,11 +337,6 @@ export function Commands() {
               </div>
             </div>
           </div>
-
-          <p className="stage-hint">
-            point at a takoyaki to pick it up and read its command · click it again to set it
-            down · esc to release
-          </p>
         </div>
       </section>
 
