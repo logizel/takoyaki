@@ -572,13 +572,13 @@ button {
 }
 
 .chopstick-col--l {
-  left: 24%;
+  left: 26%;
 }
 
 /* The right skewer sits half a ball lower, so its labels interleave
    with the left ones instead of colliding in the middle. */
 .chopstick-col--r {
-  left: 76%;
+  left: 74%;
   top: calc(39% + var(--ball-size) * 0.32);
 }
 
@@ -1111,6 +1111,19 @@ button {
   right: calc(100% + 14px);
   top: 50%;
   transform: translateY(-50%);
+}
+
+/* The hover card leaves the section heading alone on the top ball and the
+   hint alone on the bottom one. */
+.tag--glass--high {
+  top: 0;
+  transform: translateY(0);
+}
+
+.tag--glass--low {
+  top: auto;
+  bottom: 0;
+  transform: translateY(0);
 }
 
 .tag__cmd {
@@ -1801,9 +1814,20 @@ button {
   font-size: 1.05rem;
 }
 
+@media (max-width: 1400px) {
+  .tag--landed > span:last-child {
+    font-size: clamp(1.5rem, 2.6vw, 2rem);
+  }
+
+  .tag--landed .tag__arrow {
+    width: 56px;
+    height: 36px;
+  }
+}
+
 @media (max-width: 1100px) {
-  .chopstick-col--l { left: 18%; }
-  .chopstick-col--r { left: 82%; }
+  .chopstick-col--l { left: 32%; }
+  .chopstick-col--r { left: 68%; }
 
   .tag--landed > span:last-child {
     font-size: clamp(1.5rem, 2.8vw, 2rem);
@@ -1812,6 +1836,23 @@ button {
   .tag--landed .tag__arrow {
     width: 56px;
     height: 36px;
+  }
+}
+
+@media (max-width: 900px) {
+  .chopstick-col--l { left: 34%; }
+  .chopstick-col--r { left: 66%; }
+
+  .tag--landed.tag--left { right: calc(100% + 10px); }
+  .tag--landed.tag--right { left: calc(100% + 10px); }
+
+  .tag--landed > span:last-child {
+    font-size: clamp(1.35rem, 2.6vw, 1.7rem);
+  }
+
+  .tag--landed .tag__arrow {
+    width: 48px;
+    height: 32px;
   }
 }
 
@@ -1824,16 +1865,22 @@ button {
     width: min(260px, 62vw);
   }
 
-  .chopstick-col--l { left: 15%; }
-  .chopstick-col--r { left: 85%; }
+  .chopstick-col--l { left: 34%; }
+  .chopstick-col--r { left: 60%; }
 
-  .tag--landed > span:last-child {
-    font-size: clamp(1.15rem, 4.6vw, 1.6rem);
+  .tag--landed.tag--left { right: calc(100% + 10px); }
+  .tag--landed.tag--right { left: calc(100% + 10px); }
+
+  .tag--landed {
+    gap: 0;
   }
 
   .tag--landed .tag__arrow {
-    width: 44px;
-    height: 28px;
+    display: none;
+  }
+
+  .tag--landed > span:last-child {
+    font-size: 0.9rem;
   }
 
   .ball--skewer {
@@ -1853,6 +1900,14 @@ button {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.5rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .chopstick-col--l { left: 36%; }
+
+  .tag--landed > span:last-child {
+    font-size: 0.85rem;
   }
 }
 

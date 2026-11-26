@@ -80,11 +80,11 @@ export function Features() {
                   >
                     <span className="ball-contact-shadow" data-contact-shadow aria-hidden="true" />
                     <Ball size={152} tilt={tilts[(column * 4 + index) % tilts.length]} />
-                    <span className={`tag tag--landed ${index % 2 === 0 ? "tag--right" : "tag--left"}`} data-landed-label>
-                      <HandArrow className={`tag__arrow ${index % 2 === 0 ? "" : "tag__arrow--right"}`} />
+                    <span className={`tag tag--landed ${column === 0 ? "tag--left" : "tag--right"}`} data-landed-label>
+                      <HandArrow className={`tag__arrow ${column === 0 ? "tag__arrow--right" : ""}`} />
                       <span>{shortLabels[column * 4 + index]}</span>
                     </span>
-                    <span className={`tag tag--glass ${column === 0 ? "tag--right" : "tag--left"}`}>
+                    <span className={`tag tag--glass ${column === 0 ? "tag--right" : "tag--left"} ${index === 0 ? "tag--glass--high" : index === 3 ? "tag--glass--low" : ""}`}>
                       <strong>{feature.label}</strong>
                       <span className="tag__desc">{feature.desc}</span>
                       <em>{feature.note}</em>
