@@ -1,0 +1,1945 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  /* Deep lacquer-red backdrop, white ink throughout. */
+  --sage: rgba(152, 27, 24, 0.96);
+  --sage-deep: rgba(106, 14, 13, 0.96);
+  --paper: rgba(31, 7, 7, 0.72);
+  --ink: #fdf7ef;
+  --navy: #fdf7ef;
+  /* Dark ink reserved for illustration strokes so drawings keep their outlines. */
+  --line-ink: #20140f;
+  --takoyaki: #c8842e;
+  --takoyaki-dark: #f4cb8c;
+  --takoyaki-light: #e0a94a;
+  --mayo: #f2e8c9;
+  --onion: #8fc25a;
+  --tray: #cba36a;
+  --tray-dark: #a87f48;
+  --sauce: rgba(255, 240, 227, 0.86);
+  --sauce-light: #d14a35;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  scroll-behavior: auto;
+}
+
+html {
+  background: transparent;
+}
+
+body {
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.1'/%3E%3C/svg%3E"),
+    radial-gradient(90% 55% at 50% -5%, rgba(255, 118, 90, 0.2) 0%, rgba(255, 118, 90, 0) 60%),
+    radial-gradient(120% 90% at 50% 115%, rgba(28, 3, 3, 0.55) 0%, rgba(28, 3, 3, 0) 62%),
+    linear-gradient(180deg, #981b18 0%, #7c1210 52%, #4f0a09 100%) fixed;
+}
+
+main {
+  position: relative;
+  z-index: 1;
+}
+
+.world-canvas {
+  position: fixed;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+}
+
+.world-canvas canvas {
+  display: block;
+}
+
+/* Subtle ambient heat-haze layer behind everything. */
+.ambient-bg {
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.ambient-bg::before,
+.ambient-bg::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0;
+  animation: ambient-drift 28s ease-in-out infinite;
+}
+
+.ambient-bg::before {
+  width: 50vmax;
+  height: 50vmax;
+  top: -10vmax;
+  left: 5vmax;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 176, 108, 0.2), transparent 70%);
+  animation-delay: 0s;
+}
+
+.ambient-bg::after {
+  width: 40vmax;
+  height: 40vmax;
+  bottom: -8vmax;
+  right: 2vmax;
+  background: radial-gradient(circle at 70% 70%, rgba(255, 128, 80, 0.15), transparent 70%);
+  animation-delay: -14s;
+}
+
+@keyframes ambient-drift {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.15;
+  }
+  25% {
+    transform: translate3d(3vmax, -2vmax, 0) scale(1.05);
+    opacity: 0.22;
+  }
+  50% {
+    transform: translate3d(-2vmax, 4vmax, 0) scale(0.95);
+    opacity: 0.18;
+  }
+  75% {
+    transform: translate3d(-3vmax, -1vmax, 0) scale(1.02);
+    opacity: 0.2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-bg::before,
+  .ambient-bg::after {
+    animation: none;
+    opacity: 0.1;
+  }
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  color: var(--ink);
+  font-family: "Zen Kaku Gothic New", "Klee One", "Hiragino Maru Gothic ProN", system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.svg-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+/* Big bold Japanese display face for the headings and wordmark. */
+.wordmark,
+.stage__title,
+.about__name,
+.footer-headline,
+.footer-mark,
+.receipt__brand,
+.receipt__thanks,
+.footer-button,
+.topnav a,
+.tag--glass strong,
+.tag__cmd {
+  font-family: "Dela Gothic One", "Zen Kaku Gothic New", system-ui, sans-serif;
+  font-weight: 400;
+}
+
+a {
+  color: inherit;
+}
+
+/* Forcefully strip link underlines everywhere — nav, footer, buttons,
+   hover, focus and active states included. */
+a,
+a:visited,
+a:hover,
+a:focus,
+a:focus-visible,
+a:active,
+.topnav,
+.topnav a,
+.site-footer,
+.site-footer a {
+  text-decoration: none !important;
+  -webkit-text-decoration: none !important;
+  text-decoration-line: none !important;
+  text-underline-offset: 0 !important;
+}
+
+/* Some browser extensions/accessibility settings force anchor underlines at a
+   level our !important cannot beat. Painting the label in a child span and
+   keeping the anchor's own color transparent makes that forced line invisible
+   while preserving real links (new tab, middle click, right click). */
+.topnav a,
+.site-footer a {
+  color: transparent !important;
+}
+
+.topnav a > span,
+.site-footer a > span {
+  color: var(--ink);
+}
+
+.site-footer .footer-link--accent > span {
+  color: var(--takoyaki-dark);
+}
+
+.site-footer .footer-button > span {
+  color: #fff5ec;
+}
+
+button {
+  font-family: inherit;
+}
+
+::selection {
+  background: var(--takoyaki);
+  color: #1b0a06;
+}
+
+:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 4px;
+}
+
+.skip-link {
+  position: fixed;
+  z-index: 100;
+  top: 0.5rem;
+  left: 0.75rem;
+  padding: 0.55rem 0.9rem;
+  transform: translateY(-200%);
+  border: 3px solid var(--ink);
+  background: var(--paper);
+  font-weight: 600;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+/* ---------- Bonito flake cursor ---------- */
+.has-flake-cursor,
+.has-flake-cursor * {
+  cursor: none !important;
+}
+
+.bonito-cursor {
+  position: fixed;
+  z-index: 70;
+  top: -6px;
+  left: -4px;
+  width: 44px;
+  height: 30px;
+  pointer-events: none;
+  filter: drop-shadow(0 6px 6px rgba(18, 24, 10, 0.3));
+  will-change: transform;
+}
+
+.bonito-cursor svg {
+  display: block;
+  overflow: visible;
+}
+
+/* ---------- Brand mark (takoyaki icon) ---------- */
+.brand {
+  position: fixed;
+  z-index: 45;
+  top: clamp(0.85rem, 2.4vh, 1.4rem);
+  left: clamp(1rem, 3vw, 2.4rem);
+  display: grid;
+  place-items: center;
+  width: clamp(48px, 5.2vw, 60px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  transition: transform 220ms ease;
+}
+
+.brand:hover {
+  transform: translateY(-2px) rotate(-4deg);
+}
+
+.brand__art {
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 6px 13px rgba(35, 0, 0, 0.4));
+  transition: filter 220ms ease;
+}
+
+.brand:hover .brand__art {
+  filter: drop-shadow(0 9px 20px rgba(35, 0, 0, 0.52));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand,
+  .brand__art {
+    transition: none;
+  }
+
+  .brand:hover {
+    transform: none;
+  }
+}
+
+/* ---------- Nav (plain text, right side, no box) ---------- */
+.topnav {
+  position: fixed;
+  z-index: 40;
+  top: clamp(1rem, 3vh, 1.8rem);
+  right: clamp(1rem, 3vw, 2.4rem);
+  display: flex;
+  gap: clamp(0.9rem, 2.2vw, 1.8rem);
+}
+
+.topnav a {
+  font-size: clamp(1rem, 1.7vw, 1.35rem);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-decoration: none !important;
+  color: var(--ink);
+  opacity: 0.78;
+  transition: opacity 160ms ease, color 160ms ease;
+}
+
+.topnav a:hover,
+.topnav a.is-active {
+  opacity: 1;
+  color: var(--ink);
+  text-decoration: none !important;
+}
+
+.scroll-progress {
+  position: fixed;
+  z-index: 80;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 4px;
+  background: rgba(255, 247, 239, 0.22);
+  pointer-events: none;
+}
+
+.scroll-progress span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--sauce);
+  transform-origin: 0% 50%;
+}
+
+/* Steam off the bowl. */
+.steam {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  bottom: 32%;
+  width: min(52%, 430px);
+  height: 26%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.steam__wisp {
+  position: absolute;
+  bottom: 0;
+  width: 28px;
+  height: 96px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0) 70%);
+  filter: blur(6px);
+  opacity: 0;
+}
+
+/* A faint crease down the bill. */
+.receipt::after {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, transparent 49.4%, rgba(120, 100, 60, 0.22) 50%, transparent 50.6%),
+    linear-gradient(180deg, transparent 36.6%, rgba(120, 100, 60, 0.16) 37%, transparent 37.4%);
+  content: "";
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+/* ---------- Screens ---------- */
+.screen {
+  position: relative;
+  display: grid;
+  min-height: 100svh;
+  place-items: center;
+  padding: clamp(4.5rem, 10vh, 7rem) 1.5rem 3rem;
+}
+
+.screen__inner {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  justify-items: center;
+  gap: clamp(1.2rem, 4vh, 2.6rem);
+  width: 100%;
+}
+
+/* ---------- Fixed scene canvas (3D disabled; keep hooks for later) ---------- */
+.world-canvas {
+  position: fixed;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+}
+
+.world-canvas canvas {
+  display: block;
+}
+
+.screen--home::before {
+  position: absolute;
+  z-index: 0;
+  top: 50%;
+  left: 50%;
+  width: min(120vw, 1100px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -58%);
+  background: radial-gradient(circle, rgba(255, 146, 96, 0.22) 0%, rgba(255, 146, 96, 0) 62%);
+  content: "";
+  pointer-events: none;
+}
+
+.hero-plate {
+  width: min(88vw, 720px);
+  height: auto;
+  filter: drop-shadow(0 20px 28px rgba(24, 2, 2, 0.5));
+}
+
+/* The opening shot: a hand lifts the cover off the plate. */
+.cloche-scene {
+  width: min(94vw, 820px);
+}
+
+.cloche-art {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.wordmark {
+  display: grid;
+  justify-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  color: var(--navy);
+  text-align: center;
+}
+
+.wordmark__jp {
+  font-size: clamp(3.4rem, 11vw, 7.4rem);
+  font-weight: 600;
+  letter-spacing: 0.35em;
+  text-indent: 0.35em;
+}
+
+.wordmark__rm {
+  font-size: clamp(1.35rem, 4vw, 2.8rem);
+  letter-spacing: 0.55em;
+  text-indent: 0.55em;
+}
+
+.scroll-cue {
+  position: absolute;
+  bottom: clamp(1rem, 4vh, 2.2rem);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.8rem;
+  letter-spacing: 0.35em;
+  text-indent: 0.35em;
+  color: var(--ink);
+  opacity: 0.7;
+}
+
+/* ---------- About (name reveal) ---------- */
+.about {
+  position: relative;
+  height: 220vh;
+}
+
+.about__sticky {
+  position: sticky;
+  top: 0;
+  display: grid;
+  min-height: 100svh;
+  align-content: center;
+  justify-items: center;
+  gap: clamp(1rem, 3vh, 2rem);
+  padding: 2rem 1.5rem;
+  overflow: hidden;
+}
+
+.about__name {
+  margin: 0;
+  color: var(--navy);
+  font-size: clamp(3rem, 15vw, 12rem);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 0.9;
+  will-change: transform;
+}
+
+.about__text {
+  max-width: 52rem;
+  margin: 0;
+  text-align: center;
+  font-weight: 600;
+  font-size: clamp(1.5rem, 3.2vw, 2.4rem);
+  line-height: 1.6;
+  color: var(--sauce);
+}
+
+/* ---------- Stage sections (features / commands) ---------- */
+.stage {
+  position: relative;
+  height: 135vh;
+}
+
+.stage__head {
+  position: absolute;
+  z-index: 6;
+  top: clamp(3.2rem, 7vh, 5rem);
+  left: 50%;
+  width: min(100% - 3rem, 660px);
+  transform: translateX(-50%);
+  text-align: center;
+  pointer-events: none;
+}
+
+.stage__sub {
+  margin: 0.6rem auto 0;
+  max-width: 40rem;
+  font-size: clamp(1.08rem, 2.15vw, 1.45rem);
+  color: var(--sauce);
+  opacity: 0.95;
+}
+
+.stage__eyebrow {
+  margin: 0 0 0.35rem;
+  font-size: clamp(0.92rem, 1.7vw, 1.12rem);
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: lowercase;
+  color: var(--ink);
+  opacity: 0.85;
+}
+
+.stage__title {
+  margin: 0;
+  font-size: clamp(1.8rem, 4vw, 2.7rem);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.stage__sticky {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  overflow: hidden;
+}
+
+/* Two chopsticks, one on the left and one on the right. */
+.chopstick-pair {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  --ball-size: clamp(104px, 16vh, 168px);
+}
+
+.chopstick-col {
+  position: absolute;
+  top: 39%;
+  transform: translateX(-50%);
+}
+
+.chopstick-col--l {
+  left: 26%;
+}
+
+/* The right skewer sits half a ball lower, so its labels interleave
+   with the left ones instead of colliding in the middle. */
+.chopstick-col--r {
+  left: 74%;
+  top: calc(39% + var(--ball-size) * 0.32);
+}
+
+/* The stick wraps the four-ball stack, so it only fits four. */
+.skewer-stack {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: rotate(-11deg);
+}
+
+.chopstick {
+  position: absolute;
+  z-index: 0;
+  top: calc(var(--ball-size) * -0.16);
+  bottom: calc(var(--ball-size) * -0.16);
+  left: 50%;
+  width: 16px;
+  transform: translateX(-50%);
+  border: 3px solid var(--line-ink);
+  border-radius: 8px 8px 4px 4px;
+  background: linear-gradient(90deg, var(--tray-dark), var(--tray) 44%, #f0dcae 60%, #c39a63);
+  box-shadow: 3px 4px 0 rgba(24, 30, 12, 0.22);
+}
+
+/* Balls stacked shoulder-to-shoulder on the chopstick. */
+.skewer-balls {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.skewer-balls .ball + .ball {
+  margin-top: calc(var(--ball-size) * -0.38);
+}
+
+.ball--skewer {
+  width: var(--ball-size);
+  height: var(--ball-size);
+}
+
+.skewer-balls .tag--glass,
+.skewer-balls .tag--landed {
+  rotate: 11deg;
+}
+
+.ball-contact-shadow {
+  position: absolute;
+  z-index: -1;
+  bottom: 1px;
+  left: 17%;
+  width: 66%;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(23, 27, 15, 0.46), rgba(23, 27, 15, 0) 72%);
+  filter: blur(3px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Tiny translucent how-to line pinned to the bottom of a section stage. */
+.stage-hint {
+  position: absolute;
+  z-index: 9;
+  bottom: clamp(0.8rem, 2.2vh, 1.4rem);
+  left: 50%;
+  width: min(96%, 1400px);
+  margin: 0;
+  transform: translateX(-50%);
+  text-align: center;
+  font-size: min(1.72rem, 2vw);
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  color: rgba(255, 247, 239, 0.55);
+  pointer-events: none;
+}
+
+/* The plate the takoyaki are served on. */
+.stage-plate-wrap {
+  position: absolute;
+  right: 0;
+  bottom: 8%;
+  left: 0;
+  display: flex;
+  justify-content: center;
+  padding: 0 1.5rem;
+  pointer-events: none;
+}
+
+.plate-scene {
+  position: relative;
+  width: min(96%, 1000px);
+  aspect-ratio: 1000 / 480;
+}
+
+.plate-scene__back {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* The balls sit on top of the dish, in two neat rows. */
+.plate-scene__balls {
+  position: absolute;
+  inset: 0;
+}
+
+.plate-slot {
+  position: absolute;
+  width: 19.5%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+}
+
+.ball--plate {
+  position: relative;
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: grab;
+  touch-action: none;
+  transition: transform 0.15s ease-out;
+}
+
+.ball--plate:active {
+  cursor: grabbing;
+}
+
+.ball--plate .ball-art {
+  width: 100%;
+  height: 100%;
+}
+
+.stage__script {
+  margin: 0 0 0.2rem;
+  font-family: "Caveat", "Klee One", cursive;
+  font-size: clamp(2rem, 5vw, 3.6rem);
+  line-height: 1;
+  color: var(--takoyaki-dark);
+}
+
+.stage__chip {
+  display: inline-block;
+  margin: 0.75rem 0 0;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  padding: 0.45rem 1.1rem;
+  background: var(--paper);
+  box-shadow: 4px 5px 0 rgba(35, 40, 28, 0.18);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: clamp(0.78rem, 1.5vw, 0.95rem);
+  letter-spacing: 0.06em;
+}
+
+.ball--plate .ball-art {
+  opacity: 1;
+}
+
+/* Chopsticks holding the bill, and its flowy shadow. */
+.curtain__receipt {
+  position: relative;
+}
+
+.receipt__chopsticks {
+  position: absolute;
+  top: -46px;
+  left: 50%;
+  width: 118%;
+  height: 60px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.receipt__stick {
+  position: absolute;
+  top: 22px;
+  height: 14px;
+  border: 3px solid var(--line-ink);
+  border-radius: 8px;
+  background: linear-gradient(90deg, var(--tray-dark), var(--tray) 46%, #e6cfa0);
+  box-shadow: 0 8px 14px rgba(18, 24, 10, 0.22);
+}
+
+.receipt__stick--a {
+  left: -2%;
+  width: 62%;
+  transform: rotate(-7deg);
+}
+
+.receipt__stick--b {
+  right: -2%;
+  width: 62%;
+  transform: rotate(6deg);
+}
+
+.receipt__shadow {
+  position: absolute;
+  z-index: -1;
+  left: 50%;
+  bottom: -34px;
+  width: 86%;
+  height: 60px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(18, 24, 10, 0.4) 0%, rgba(18, 24, 10, 0) 70%);
+  filter: blur(6px);
+  pointer-events: none;
+}
+
+/* ---------- Bill (unrolls like a letter) ---------- */
+.bill {
+  position: relative;
+  height: 160vh;
+}
+
+.bill__sticky {
+  position: sticky;
+  top: 0;
+  display: grid;
+  min-height: 100svh;
+  place-items: center;
+  padding: 3rem 1.5rem;
+  overflow: hidden;
+}
+
+.bill__shadow {
+  position: absolute;
+  z-index: 0;
+  left: 50%;
+  bottom: 18%;
+  width: min(70vw, 520px);
+  height: 64px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(18, 24, 10, 0.42) 0%, rgba(18, 24, 10, 0) 70%);
+  filter: blur(8px);
+  pointer-events: none;
+}
+
+/* The real 3D paper sheet. */
+.bill__canvas {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  pointer-events: none;
+}
+
+.bill__canvas canvas {
+  display: block;
+}
+
+.paper3d .bill__stage > .receipt,
+.paper3d .receipt__chopsticks,
+.paper3d .bill__shadow {
+  opacity: 0;
+}
+
+.receipt__steps {
+  display: grid;
+  gap: 1.1rem;
+  margin-top: 1.6rem;
+  text-align: left;
+}
+
+.receipt__step {
+  display: grid;
+  grid-template-columns: 4rem 1fr;
+  gap: 1.1rem;
+  border-top: 3px solid rgba(22, 22, 22, 0.9);
+  padding-top: 1.1rem;
+}
+
+.receipt__num {
+  font-family: "Dela Gothic One", system-ui, sans-serif;
+  font-size: clamp(1.95rem, 3.6vw, 2.8rem);
+  line-height: 1.1;
+  color: #161616;
+}
+
+.receipt__step h3 {
+  margin: 0 0 0.35rem;
+  font-family: "Dela Gothic One", "Zen Kaku Gothic New", sans-serif;
+  font-size: clamp(1.25rem, 2.4vw, 1.7rem);
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+  color: #161616;
+  font-weight: 400;
+}
+
+.receipt__step p {
+  margin: 0;
+  font-size: clamp(1.08rem, 2.1vw, 1.4rem);
+  line-height: 1.6;
+  letter-spacing: 0.02em;
+  color: #2e2e2e;
+  font-weight: 500;
+}
+
+.receipt__roll-edge {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 14px;
+  background: linear-gradient(180deg, rgba(28, 28, 28, 0.28), rgba(28, 28, 28, 0));
+  pointer-events: none;
+}
+
+.ball--plate:active {
+  cursor: grabbing;
+}
+
+.slot {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  width: 100px;
+  height: 100px;
+  margin: -50px 0 0 -50px;
+  transform: translateX(-50%);
+}
+
+.slot--tray {
+  width: 96px;
+  height: 96px;
+  margin: -48px 0 0 -48px;
+}
+
+.ball {
+  position: relative;
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ball:hover,
+.ball:focus-visible {
+  transform: translateY(-10px) scale(1.06);
+}
+
+.ball-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* ---------- Hover tags ---------- */
+.tag {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 10px);
+  transform: translateY(-50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+
+/* After landing, a small ink arrow + one-word feature sits beside each ball. */
+.tag--landed {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  width: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  color: var(--ink);
+  font-size: clamp(0.85rem, 1.3vw, 1.05rem);
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0;
+  z-index: 8;
+}
+
+.tag--landed .tag__arrow {
+  width: 64px;
+  height: 40px;
+  flex: 0 0 auto;
+}
+
+.tag__arrow--right {
+  transform: rotate(180deg);
+}
+
+.tag--landed > span:last-child {
+  font-family: "Dela Gothic One", "Zen Kaku Gothic New", sans-serif;
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  letter-spacing: 0.01em;
+}
+
+.ball:hover .tag--landed,
+.ball:focus-visible .tag--landed {
+  opacity: 0 !important;
+}
+
+.ball:hover .tag,
+.ball:focus-visible .tag {
+  opacity: 1;
+}
+
+.tag--box {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 220px;
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  padding: 0.7rem 1.1rem;
+  background: var(--paper);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.tag--box strong {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.tag--box em {
+  font-style: normal;
+  font-size: 0.92rem;
+  color: var(--navy);
+  opacity: 0.85;
+}
+
+.tag--free {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+
+.tag--free .tag__arrow {
+  width: 54px;
+  height: 34px;
+  flex: 0 0 auto;
+}
+
+.tag__text {
+  display: grid;
+  color: var(--navy);
+  font-size: clamp(1.2rem, 2.4vw, 1.6rem);
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: left;
+}
+
+.tag__text em {
+  font-style: normal;
+  font-size: 0.86rem;
+  opacity: 0.8;
+}
+
+/* Transparent dialogue box */
+.tag--glass {
+  display: grid;
+  gap: 0.45rem;
+  width: min(520px, 54vw);
+  border: 2px solid rgba(255, 255, 255, 0.26);
+  border-radius: 20px;
+  padding: 1.35rem 1.6rem;
+  background: rgba(24, 6, 6, 0.74);
+  -webkit-backdrop-filter: blur(16px) saturate(1.15);
+  backdrop-filter: blur(16px) saturate(1.15);
+  box-shadow: 0 16px 44px rgba(12, 2, 2, 0.4);
+  color: #fff5ec;
+  text-align: left;
+  white-space: normal;
+  z-index: 20;
+}
+
+.tag--glass strong {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.tag--glass .tag__desc {
+  font-size: 1.14rem;
+  line-height: 1.55;
+  color: rgba(255, 245, 236, 0.88);
+}
+
+.tag--glass em {
+  font-style: normal;
+  font-size: 1.02rem;
+  font-weight: 600;
+  color: #f6d9a0;
+}
+
+.tag--above {
+  left: 50%;
+  top: auto;
+  bottom: calc(100% + 10px);
+  transform: translateX(-50%);
+}
+
+.tag--right {
+  left: calc(100% + 14px);
+  right: auto;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.tag--left {
+  left: auto;
+  right: calc(100% + 14px);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* The hover card leaves the section heading alone on the top ball and the
+   hint alone on the bottom one. */
+.tag--glass--high {
+  top: 0;
+  transform: translateY(0);
+}
+
+.tag--glass--low {
+  top: auto;
+  bottom: 0;
+  transform: translateY(0);
+}
+
+.tag__cmd {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.tag__cmd .tag__arrow {
+  width: 42px;
+  height: 28px;
+  flex: 0 0 auto;
+}
+
+/* ---------- Tray stage: notes scattered around the dish ---------- */
+/* The layer holding every label + long arrow, over the plate but
+   ignoring the pointer. */
+.plate-notes {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+}
+
+/* A label block: big bold command, smaller red explanation. */
+.plate-note {
+  position: absolute;
+  display: grid;
+  gap: 0.1em;
+  text-align: left;
+  transition: transform 240ms ease;
+}
+
+.plate-note.note--on {
+  transform: scale(1.06);
+}
+
+.note__cmd {
+  font-family: "Dela Gothic One", "Zen Kaku Gothic New", sans-serif;
+  font-size: clamp(1.65rem, 3.2vw, 2.9rem);
+  font-weight: 700;
+  line-height: 1.18;
+  letter-spacing: 0.01em;
+  color: var(--ink);
+}
+
+.note__desc {
+  max-width: 26ch;
+  font-family: "Zen Kaku Gothic New", sans-serif;
+  font-size: clamp(1.18rem, 2.1vw, 1.75rem);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--sauce);
+}
+
+/* Four wide columns above the dish, four below — staggered so no two
+   blocks ever touch. */
+.note--link { left: 1%; top: 3%; }
+.note--unlink { left: 26%; top: 13%; }
+.note--setchannel { left: 51%; top: 1%; }
+.note--me { left: 77%; top: 11%; }
+.note--streak { left: 0%; top: 84%; }
+.note--compare { left: 26%; top: 95%; }
+.note--top { left: 52%; top: 85%; }
+.note--topday { left: 78%; top: 74%; }
+
+/* ---------- Chopstick hand ---------- */
+.hand-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+}
+
+.hand {
+  --skin: #e7b08a;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: clamp(190px, 21vw, 270px);
+  transform-origin: 8% 88%;
+  will-change: transform;
+}
+
+/* Natural skin tones from the public-domain hand illustration. */
+.hand__art {
+  display: block;
+  width: 100%;
+  height: auto;
+  transform: scaleX(-1);
+  opacity: 1;
+  filter: drop-shadow(3px 5px 0 rgba(35, 40, 28, 0.12));
+}
+
+/* The sticks pinch shut around a picked ball. */
+.hand__stick {
+  transform-box: view-box;
+  transition: transform 220ms ease;
+}
+
+.hand__stick--a {
+  transform-origin: 298px 8px;
+}
+
+.hand__stick--b {
+  transform-origin: 308px 28px;
+}
+
+.hand--picking .hand__stick--a {
+  transform: rotate(1.8deg);
+}
+
+.hand--picking .hand__stick--b {
+  transform: rotate(-1.8deg);
+}
+
+/* The floating explanation: rides beside the carried ball, on whichever
+   side of the screen has room. Sized to its content so the command sits
+   on one straight line and the explanation wraps neatly. */
+.pick-note {
+  position: absolute;
+  z-index: 9;
+  display: grid;
+  gap: 0.1em;
+  width: max-content;
+  max-width: min(640px, 72vw);
+  pointer-events: none;
+  opacity: 0;
+  text-shadow: 0 2px 14px rgba(40, 0, 0, 0.55);
+}
+
+.pick-note .note__cmd {
+  white-space: nowrap;
+}
+
+.pick-note .note__desc {
+  width: max-content;
+  max-width: 28ch;
+}
+
+.pick-note--left {
+  right: calc(100% + 18px);
+  top: 45%;
+  text-align: right;
+}
+
+.pick-note--right {
+  left: calc(100% + 18px);
+  top: 45%;
+  text-align: left;
+}
+
+.pick-note--right.pick-note--on {
+  animation: pick-note-right-pop 320ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.pick-note--left.pick-note--on {
+  animation: pick-note-side-pop 320ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes pick-note-side-pop {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pick-note-right-pop {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (max-width: 720px) {
+  .note__desc {
+    max-width: 20ch;
+  }
+
+  .note--link { left: 0%; top: 0%; }
+  .note--unlink { left: 22%; top: 12%; }
+  .note--setchannel { left: 50%; top: 0%; }
+  .note--me { left: 70%; }
+
+  .pick-note {
+    max-width: min(240px, 55vw);
+  }
+}
+
+/* ---------- Curtain + receipt ---------- */
+.curtain {
+  position: relative;
+  height: 112vh;
+}
+
+.curtain__receipt {
+  position: sticky;
+  top: 0;
+  display: grid;
+  min-height: 100svh;
+  place-items: center;
+  padding: 2rem 1.5rem;
+}
+
+.curtain__panel {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  height: 100svh;
+  margin-top: -100svh;
+  background: var(--sage);
+  will-change: transform;
+}
+
+.receipt {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding: 3rem 2.6rem 2.4rem;
+  background-color: #e7ddc0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.22'/%3E%3C/svg%3E");
+  background-size: 150px 150px;
+  box-shadow:
+    0 28px 64px rgba(24, 28, 14, 0.32),
+    0 2px 0 rgba(255, 255, 255, 0.5) inset,
+    inset 0 0 130px rgba(150, 128, 78, 0.2);
+  text-align: center;
+  text-transform: uppercase;
+  color: #1c1c1c;
+}
+
+.receipt::before {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 18px;
+  background: linear-gradient(180deg, transparent, rgba(104, 83, 43, 0.16));
+  content: "";
+  pointer-events: none;
+}
+
+/* Real tapered wooden chopsticks holding the bill. */
+.receipt__chopsticks {
+  position: absolute;
+  z-index: 0;
+  top: -70px;
+  left: -6%;
+  width: 112%;
+  height: auto;
+  filter: drop-shadow(0 12px 12px rgba(18, 24, 10, 0.3));
+  pointer-events: none;
+}
+
+.receipt__chopsticks--front {
+  z-index: 3;
+}
+
+.bill__stage {
+  position: relative;
+  width: min(94vw, 560px);
+}
+
+.receipt__thanks {
+  margin: 0;
+  font-size: clamp(1.5rem, 3.4vw, 2.2rem);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.receipt__lead {
+  margin: 0.5rem 0 0;
+  font-size: clamp(1.15rem, 2.3vw, 1.6rem);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #161616;
+}
+
+.receipt__note {
+  margin: 1.5rem auto 0;
+  max-width: 30rem;
+  font-size: clamp(0.66rem, 1.3vw, 0.78rem);
+  line-height: 1.7;
+  letter-spacing: 0.06em;
+  color: rgba(28, 28, 28, 0.78);
+}
+
+.receipt__dash {
+  margin: 1.4rem 0 1.8rem;
+  padding-top: 1.4rem;
+  border-top: 2px dashed rgba(28, 28, 28, 0.45);
+  font-size: clamp(0.72rem, 1.5vw, 0.9rem);
+  letter-spacing: 0.14em;
+}
+
+.receipt__table {
+  display: grid;
+  gap: 0.1rem;
+  text-align: left;
+  font-size: clamp(0.72rem, 1.5vw, 0.88rem);
+  letter-spacing: 0.05em;
+}
+
+.receipt__tr {
+  display: grid;
+  grid-template-columns: 2.4rem 1fr auto;
+  gap: 1rem;
+  align-items: baseline;
+  padding: 0.5rem 0;
+  border-bottom: 1px dashed rgba(28, 28, 28, 0.28);
+}
+
+.receipt__tr--head {
+  border-bottom: 2px solid #1c1c1c;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+}
+
+.receipt__tr--total {
+  border-bottom: 0;
+  margin-top: 0.4rem;
+  padding-top: 0.8rem;
+  border-top: 2px solid #1c1c1c;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+}
+
+.receipt__item {
+  white-space: nowrap;
+}
+
+.receipt__divider {
+  width: 70%;
+  height: 0;
+  margin: 2.2rem auto 1.6rem;
+  border-top: 6px double #1c1c1c;
+}
+
+.receipt__brand {
+  margin: 0;
+  font-size: clamp(2rem, 5.4vw, 3.4rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.receipt__estd {
+  margin: 0.5rem 0 0;
+  font-size: 0.7rem;
+  letter-spacing: 0.34em;
+  color: rgba(28, 28, 28, 0.75);
+}
+
+.receipt__tag {
+  margin: 0.25rem 0 0;
+  font-size: clamp(0.8rem, 1.7vw, 1rem);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}
+
+.receipt__title {
+  margin: 0 0 1.4rem;
+  padding-bottom: 1rem;
+  border-bottom: 3px dashed rgba(35, 40, 28, 0.4);
+  text-align: center;
+  font-size: clamp(1.1rem, 2.4vw, 1.6rem);
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+  color: var(--navy);
+}
+
+.receipt__rows {
+  display: grid;
+}
+
+.receipt__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 2px dashed rgba(35, 40, 28, 0.32);
+  padding: 0.75rem 0;
+  font-size: clamp(0.95rem, 1.8vw, 1.15rem);
+}
+
+.receipt__row--total {
+  border-top: 4px solid var(--line-ink);
+  border-bottom: 0;
+  margin-top: 0.9rem;
+  padding-top: 1rem;
+  font-weight: 600;
+  font-size: clamp(1.05rem, 2vw, 1.3rem);
+}
+
+.receipt__foot {
+  margin: 1.3rem 0 0;
+  text-align: center;
+  font-size: clamp(0.72rem, 1.5vw, 0.9rem);
+  letter-spacing: 0.18em;
+  color: var(--navy);
+  opacity: 0.8;
+}
+
+/* ---------- Footer ---------- */
+.site-footer {
+  position: relative;
+  overflow: hidden;
+  background: none;
+  padding: clamp(3rem, 9vh, 5.5rem) clamp(1.2rem, 5vw, 3rem) clamp(10rem, 25vw, 16rem);
+  text-align: center;
+}
+
+.footer-watermark {
+  position: absolute;
+  z-index: 0;
+  top: 55%;
+  left: 50%;
+  translate: -50% -50%;
+  width: 100%;
+  max-width: none;
+  text-align: center;
+  font-family: "Dela Gothic One", system-ui, sans-serif;
+  font-size: clamp(8rem, 22vw, 30rem);
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-indent: 0.005em;
+  white-space: nowrap;
+  color: rgba(255, 247, 239, 0.08);
+  text-shadow: 0 20px 0 rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+  user-select: none;
+}
+
+@keyframes footer-octopus-drift {
+  0%,
+  100% {
+    translate: -50% 0;
+    rotate: 0deg;
+  }
+
+  50% {
+    translate: -50% -8px;
+    rotate: -0.6deg;
+  }
+}
+
+.footer-inner {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 1120px);
+  margin: 0 auto;
+}
+
+/* ---------- Footer tentacle crawl (walk cycle) ---------- */
+.footer-tentacles {
+  position: absolute;
+  z-index: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 120px;
+  pointer-events: none;
+  user-select: none;
+  overflow: hidden;
+  opacity: 0.18;
+}
+
+.footer-tentacles svg {
+  position: absolute;
+  bottom: -10px;
+  left: 0;
+  width: 200%;
+  height: 100%;
+  animation: tentacle-crawl 16s linear infinite;
+  will-change: transform;
+}
+
+@keyframes tentacle-crawl {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.footer-tentacle {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,0.25));
+}
+
+.footer-tentacle--1 { stroke-dasharray: 180 220; animation: tentacle-wave-1 1.8s ease-in-out infinite; }
+.footer-tentacle--2 { stroke-dasharray: 160 240; animation: tentacle-wave-2 2.1s ease-in-out infinite; }
+.footer-tentacle--3 { stroke-dasharray: 200 200; animation: tentacle-wave-3 1.6s ease-in-out infinite; }
+.footer-tentacle--4 { stroke-dasharray: 140 260; animation: tentacle-wave-4 2.3s ease-in-out infinite; }
+.footer-tentacle--5 { stroke-dasharray: 170 230; animation: tentacle-wave-5 1.9s ease-in-out infinite; }
+.footer-tentacle--6 { stroke-dasharray: 150 250; animation: tentacle-wave-6 2.0s ease-in-out infinite; }
+
+@keyframes tentacle-wave-1 { 0%,100% { stroke-dashoffset: 0; } 50% { stroke-dashoffset: 200; } }
+@keyframes tentacle-wave-2 { 0%,100% { stroke-dashoffset: 0; } 50% { stroke-dashoffset: -200; } }
+@keyframes tentacle-wave-3 { 0%,100% { stroke-dashoffset: 0; } 50% { stroke-dashoffset: 220; } }
+@keyframes tentacle-wave-4 { 0%,100% { stroke-dashoffset: 0; } 50% { stroke-dashoffset: -220; } }
+@keyframes tentacle-wave-5 { 0%,100% { stroke-dashoffset: 0; } 50% { stroke-dashoffset: 180; } }
+@keyframes tentacle-wave-6 { 0%,100% { stroke-dashoffset: 0; } 50% { stroke-dashoffset: -180; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .footer-tentacles svg,
+  .footer-tentacle {
+    animation: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .site-footer {
+    padding-bottom: clamp(8rem, 25vw, 12rem);
+  }
+
+  .footer-watermark {
+    font-size: clamp(6rem, 22vw, 14rem);
+    letter-spacing: 0.04em;
+    text-indent: 0.005em;
+    color: rgba(255, 247, 239, 0.06);
+  }
+
+  .stage-hint {
+    width: min(92%, 760px);
+    font-size: clamp(0.95rem, 3.4vw, 1.25rem);
+    white-space: normal;
+  }
+}
+
+.footer-headline {
+  margin: 0;
+  font-size: clamp(1.8rem, 4vw, 2.7rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.02;
+  color: var(--ink);
+}
+
+.footer-sub {
+  margin: 0.6rem 0 0;
+  font-size: clamp(1.15rem, 1.9vw, 1.45rem);
+  color: rgba(255, 247, 239, 0.82);
+}
+
+.footer-cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 1.2rem;
+  margin-top: 1.4rem;
+}
+
+.footer-button {
+  display: inline-flex;
+  min-height: 52px;
+  align-items: center;
+  border: 2px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  padding: 0.75rem 1.6rem;
+  background: rgba(28, 6, 6, 0.62);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  color: #fff5ec;
+  font-size: 1.2rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), background 180ms ease, border-color 180ms ease;
+}
+
+.footer-button:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.footer-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.footer-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--onion);
+  box-shadow: 0 0 0 4px rgba(94, 140, 52, 0.22);
+}
+
+.footer-rule {
+  height: 1px;
+  margin: clamp(1.6rem, 4vh, 2.6rem) 0;
+  background: rgba(255, 247, 239, 0.28);
+}
+
+.footer-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  justify-items: center;
+  gap: 1.6rem 2rem;
+}
+
+.footer-col {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 0.55rem;
+  text-align: center;
+}
+
+.footer-col h3 {
+  margin: 0 0 0.35rem;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(255, 247, 239, 0.66);
+}
+
+.footer-link {
+  justify-self: center;
+  font-size: 1.2rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--ink);
+  opacity: 0.9;
+}
+
+.footer-link:hover {
+  opacity: 1;
+}
+
+.footer-link--accent {
+  color: var(--takoyaki-dark);
+}
+
+.footer-bottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem 1.6rem;
+  font-size: 1.05rem;
+  color: rgba(255, 247, 239, 0.8);
+}
+
+.footer-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.footer-mark {
+  display: inline-grid;
+  place-items: center;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  padding: 0.1rem 0.35rem;
+  font-size: 0.9rem;
+  letter-spacing: 0.05em;
+  background: var(--takoyaki);
+  color: #2a1408;
+}
+
+.footer-meta {
+  font-size: 1.05rem;
+}
+
+@media (max-width: 1400px) {
+  .tag--landed > span:last-child {
+    font-size: clamp(1.5rem, 2.6vw, 2rem);
+  }
+
+  .tag--landed .tag__arrow {
+    width: 56px;
+    height: 36px;
+  }
+}
+
+@media (max-width: 1100px) {
+  .chopstick-col--l { left: 32%; }
+  .chopstick-col--r { left: 68%; }
+
+  .tag--landed > span:last-child {
+    font-size: clamp(1.5rem, 2.8vw, 2rem);
+  }
+
+  .tag--landed .tag__arrow {
+    width: 56px;
+    height: 36px;
+  }
+}
+
+@media (max-width: 900px) {
+  .chopstick-col--l { left: 34%; }
+  .chopstick-col--r { left: 66%; }
+
+  .tag--landed.tag--left { right: calc(100% + 10px); }
+  .tag--landed.tag--right { left: calc(100% + 10px); }
+
+  .tag--landed > span:last-child {
+    font-size: clamp(1.35rem, 2.6vw, 1.7rem);
+  }
+
+  .tag--landed .tag__arrow {
+    width: 48px;
+    height: 32px;
+  }
+}
+
+@media (max-width: 720px) {
+  .tag--box {
+    min-width: 150px;
+  }
+
+  .tag--glass {
+    width: min(260px, 62vw);
+  }
+
+  .chopstick-col--l { left: 34%; }
+  .chopstick-col--r { left: 60%; }
+
+  .tag--landed.tag--left { right: calc(100% + 10px); }
+  .tag--landed.tag--right { left: calc(100% + 10px); }
+
+  .tag--landed {
+    gap: 0;
+  }
+
+  .tag--landed .tag__arrow {
+    display: none;
+  }
+
+  .tag--landed > span:last-child {
+    font-size: 0.9rem;
+  }
+
+  .ball--skewer {
+    width: 124px;
+    height: 124px;
+  }
+
+  .skewer-balls .ball + .ball {
+    margin-top: -46px;
+  }
+
+  .plate-slot {
+    width: 21.5%;
+  }
+
+  .footer-bottom {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .chopstick-col--l { left: 36%; }
+
+  .tag--landed > span:last-child {
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .slot {
+    width: 84px;
+    height: 84px;
+    margin: -42px 0 0 -42px;
+  }
+
+  .slot--tray {
+    width: 76px;
+    height: 76px;
+    margin: -38px 0 0 -38px;
+  }
+
+  .tag {
+    left: auto;
+    right: calc(100% + 8px);
+    transform: translateY(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

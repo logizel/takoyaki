@@ -1,0 +1,3 @@
+export const discordInviteUrl =
+  process.env.NEXT_PUBLIC_DISCORD_INVITE_URL ??
+  "https://discord.com/oauth2/authorize?client_id=YOUR_DISCORD_CLIENT_ID&scope=bot%20applications.commands";
