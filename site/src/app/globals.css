@@ -1003,6 +1003,14 @@ button {
   opacity: 1;
 }
 
+/* Hover cards take turns: the next card waits (360ms) for the outgoing one
+   to finish fading out (320ms) before its own slow fade begins, so two
+   cards are never on screen at the same time. */
+.ball:hover .tag--glass,
+.ball:focus-visible .tag--glass {
+  transition: opacity 340ms ease 360ms;
+}
+
 .tag--box {
   display: grid;
   gap: 0.15rem;
@@ -1071,6 +1079,8 @@ button {
   text-align: left;
   white-space: normal;
   z-index: 20;
+  /* Fade-out speed: the outgoing card is gone within this window. */
+  transition: opacity 320ms ease;
 }
 
 .tag--glass strong {
@@ -1090,6 +1100,58 @@ button {
   font-size: 1.02rem;
   font-weight: 600;
   color: #f6d9a0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tag--glass,
+  .ball:hover .tag--glass,
+  .ball:focus-visible .tag--glass {
+    transition-duration: 1ms;
+    transition-delay: 0ms;
+  }
+}
+
+/* Narrower cards keep the hover panel on its own side of the stage so it
+   never reaches the opposite column's labels. */
+@media (max-width: 1100px) {
+  .tag--glass {
+    width: min(520px, 28vw);
+    padding: 1.1rem 1.25rem;
+  }
+
+  .tag--glass strong {
+    font-size: clamp(1.35rem, 2.5vw, 1.75rem);
+  }
+
+  .tag--glass .tag__desc {
+    font-size: clamp(1rem, 1.8vw, 1.14rem);
+  }
+}
+
+@media (max-width: 950px) {
+  .tag--glass {
+    width: min(520px, 24vw);
+  }
+}
+
+/* Below 720px the stage is too tight for the card to stay clear of the
+   opposite column, so those labels take turns with it: while a card is up
+   the other column's labels fade out (and the ball itself sits under the
+   glass, which reads as a floating detail panel). */
+@media (max-width: 720px) {
+  .chopstick-pair:has(.chopstick-col--l .ball:is(:hover, :focus-visible)) .chopstick-col--r .tag--landed,
+  .chopstick-pair:has(.chopstick-col--r .ball:is(:hover, :focus-visible)) .chopstick-col--l .tag--landed {
+    opacity: 0 !important;
+    transition: opacity 260ms ease;
+  }
+}
+
+/* Each skewer is its own stacking context (the rotation), so the left
+   column's card would slide *under* the right column's balls. Raise the
+   left column only while its card is open — the two cards are never up
+   together, so nothing else is affected. */
+.chopstick-pair:has(.chopstick-col--l .ball:is(:hover, :focus-visible)) .chopstick-col--l {
+  z-index: 2;
 }
 
 .tag--above {
@@ -1114,15 +1176,29 @@ button {
 }
 
 /* The hover card leaves the section heading alone on the top ball and the
-   hint alone on the bottom one. */
-.tag--glass--high {
+   hint alone on the bottom one. The −11° skewer tilt plus the +11° card
+   counter-rotation slides every card diagonally (down-right for the left
+   column, down-left for the right one), so the top-left card is nudged
+   down and the bottom-right card up — back into the text-free band. */
+.chopstick-col--l .tag--glass--high {
+  top: 30%;
+  transform: translateY(0);
+}
+
+.chopstick-col--r .tag--glass--high {
   top: 0;
   transform: translateY(0);
 }
 
-.tag--glass--low {
+.chopstick-col--l .tag--glass--low {
   top: auto;
   bottom: 0;
+  transform: translateY(0);
+}
+
+.chopstick-col--r .tag--glass--low {
+  top: auto;
+  bottom: 50%;
   transform: translateY(0);
 }
 
@@ -1928,6 +2004,26 @@ button {
     left: auto;
     right: calc(100% + 8px);
     transform: translateY(-50%);
+  }
+
+  /* Hover cards point at the stage centre again (the blanket rule above
+     would flip the left column's card outwards) and stay inside the
+     viewport. */
+  .skewer-balls .tag--glass.tag--right {
+    left: calc(100% + 8px);
+    right: auto;
+  }
+
+  .tag--glass {
+    width: min(260px, 44vw);
+  }
+
+  /* Keep the card short enough to stay between the heading and the hint. */
+  .tag--glass .tag__desc {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    overflow: hidden;
   }
 }
 

@@ -27,6 +27,9 @@ export function Features() {
     const drop = gsap.timeline({
       scrollTrigger: { trigger: scope.current, start: "top top", end: "bottom bottom", scrub: 1 },
     });
+    // Labels reveal strictly one after another: each one waits for its ball
+    // to land *and* for the previous label's slow fade to finish.
+    let nextLabelAt = 0;
     balls.forEach((ball, index) => {
       const side = index % 2 === 0 ? -1 : 1;
       const landedLabel = ball.querySelector<HTMLElement>("[data-landed-label]");
@@ -45,12 +48,14 @@ export function Features() {
         drop.fromTo(contactShadow, { opacity: 0, scaleX: 0.35 }, { opacity: 0.42, scaleX: 1, duration: 0.35 }, at + 0.76);
       }
       if (landedLabel) {
+        const start = Math.max(nextLabelAt, at + 0.76);
         drop.fromTo(
           landedLabel,
           { opacity: 0, y: 8 },
-          { opacity: 1, y: 0, ease: "power2.out", duration: 0.35 },
-          index * 0.3 + 0.75,
+          { opacity: 1, y: 0, ease: "power2.out", duration: 0.55 },
+          start,
         );
+        nextLabelAt = start + 0.55;
       }
     });
   }, { scope });
